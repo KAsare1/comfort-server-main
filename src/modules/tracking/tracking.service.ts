@@ -99,41 +99,42 @@ export class TrackingService {
     return query.getOne();
   }
 
-  async getActiveBookingLocation(bookingId: string): Promise<{
-    booking: any;
-    latestLocation: TrackingData | null;
-    route: any;
-  }> {
-    const booking = await this.bookingsService.findById(bookingId);
-    
-    if (!booking.driver) {
-      throw new BadRequestException('No driver assigned to booking');
-    }
-
-    const latestLocation = await this.getLatestDriverLocation(booking.driverId, bookingId);
-
-    return {
-      booking: {
-        id: booking.id,
-        reference: booking.reference,
-        status: booking.status,
-        pickupLocation: booking.pickupLocation,
-        dropoffLocation: booking.dropoffLocation,
-        pickupLatitude: booking.pickupLatitude,
-        pickupLongitude: booking.pickupLongitude,
-        dropoffLatitude: booking.dropoffLatitude,
-        dropoffLongitude: booking.dropoffLongitude,
-        driver: {
-          id: booking.driver.id,
-          name: booking.driver.name,
-          phone: booking.driver.phone,
-          vehicle: booking.driver.vehicle,
-        },
-      },
-      latestLocation,
-      route: booking.route,
-    };
+async getActiveBookingLocation(bookingReference: string): Promise<{
+  booking: any;
+  latestLocation: TrackingData | null;
+  route: any;
+}> {
+  // Use findByReference instead of findById
+  const booking = await this.bookingsService.findByReference(bookingReference);
+  
+  if (!booking.driver) {
+    throw new BadRequestException('No driver assigned to booking');
   }
+
+  const latestLocation = await this.getLatestDriverLocation(booking.driverId, booking.id);
+
+  return {
+    booking: {
+      id: booking.id,
+      reference: booking.reference,
+      status: booking.status,
+      pickupLocation: booking.pickupLocation,
+      dropoffLocation: booking.dropoffLocation,
+      pickupLatitude: booking.pickupLatitude,
+      pickupLongitude: booking.pickupLongitude,
+      dropoffLatitude: booking.dropoffLatitude,
+      dropoffLongitude: booking.dropoffLongitude,
+      driver: {
+        id: booking.driver.id,
+        name: booking.driver.name,
+        phone: booking.driver.phone,
+        vehicle: booking.driver.vehicle,
+      },
+    },
+    latestLocation,
+    route: booking.route,
+  };
+}
 
   async getDriverTrackingHistory(
     driverId: string,
