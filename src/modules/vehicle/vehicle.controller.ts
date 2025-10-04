@@ -39,6 +39,21 @@ export class VehiclesController {
     return this.vehiclesService.getVehicleStats();
   }
 
+  @Get('search')
+  findWithPagination(@Query() queryDto: VehicleQueryDto) {
+    return this.vehiclesService.findWithPagination(queryDto);
+  }
+
+  @Get('by-make')
+  getVehiclesByMake() {
+    return this.vehiclesService.getVehiclesByMake();
+  }
+
+  @Get('maintenance-alerts')
+  getMaintenanceAlerts() {
+    return this.vehiclesService.getMaintenanceAlerts();
+  }
+
   @Get('license/:licensePlate')
   findByLicensePlate(@Param('licensePlate') licensePlate: string) {
     return this.vehiclesService.findByLicensePlate(licensePlate);
@@ -79,19 +94,4 @@ export class VehiclesController {
   remove(@Param('id') id: string) {
     return this.vehiclesService.delete(id);
   }
-
-  @Get('search')
-findWithPagination(@Query() queryDto: VehicleQueryDto) {
-  return this.vehiclesService.findWithPagination(queryDto);
-}
-
-@Get('by-make')
-getVehiclesByMake() {
-  return this.vehiclesService.getVehiclesByMake();
-}
-
-@Get('maintenance-alerts')
-getMaintenanceAlerts() {
-  return this.vehiclesService.getMaintenanceAlerts();
-}
 }
