@@ -7,7 +7,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 // import 'module-alias/register';
 
 
-declare const module: any;
+// declare const module: any;
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -45,16 +45,16 @@ async function bootstrap() {
   // WebSocket adapter for real-time tracking
   app.useWebSocketAdapter(new IoAdapter(app));
 
-  const port = configService.get('PORT', 3000);
+  const port = configService.get('PORT', 3001);
   await app.listen(port);
   
   console.log(`🚗 COMFORT Backend running on port ${port}`);
   console.log(`📍 API available at: http://localhost:${port}/${configService.get('API_PREFIX', 'api/v1')}`);
 
-    if (module.hot) {
-    module.hot.accept();
-    module.hot.dispose(() => app.close());
-  }
+  //   if (module.hot) {
+  //   module.hot.accept();
+  //   module.hot.dispose(() => app.close());
+  // }
 }
 
 bootstrap();

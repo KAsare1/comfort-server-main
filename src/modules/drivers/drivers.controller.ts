@@ -33,8 +33,23 @@ export class DriversController {
     const latitude = parseFloat(lat);
     const longitude = parseFloat(lng);
     const radiusKm = radius ? parseFloat(radius) : 10;
-    
     return this.driversService.findNearbyDrivers(latitude, longitude, radiusKm);
+  }
+
+  @Get('search')
+  findWithPagination(@Query() queryDto: DriverQueryDto) {
+    return this.driversService.findWithPagination(queryDto);
+  }
+
+  @Get('stats/overview')
+  getOverallStats() {
+    return this.driversService.getOverallDriverStats();
+  }
+
+  @Get('expiring-licenses')
+  getExpiringLicenses(@Query('days') days?: string) {
+    const daysAhead = days ? parseInt(days) : 30;
+    return this.driversService.getExpiringLicenses(daysAhead);
   }
 
   @Get(':id')
@@ -84,32 +99,16 @@ export class DriversController {
     return this.driversService.updateRating(id, body.rating);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.driversService.deactivate(id);
-  }
-
-  @Get('search')
-  findWithPagination(@Query() queryDto: DriverQueryDto) {
-    return this.driversService.findWithPagination(queryDto);
-  }
-
-  @Get('stats/overview')
-  getOverallStats() {
-    return this.driversService.getOverallDriverStats();
-  }
-
-  @Get('expiring-licenses')
-  getExpiringLicenses(@Query('days') days?: string) {
-    const daysAhead = days ? parseInt(days) : 30;
-    return this.driversService.getExpiringLicenses(daysAhead);
-  }
-
   @Put(':id/documents')
   updateDocuments(
     @Param('id') id: string,
     @Body() body: { documents: Record<string, string> },
   ) {
     return this.driversService.updateDocuments(id, body.documents);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.driversService.deactivate(id);
   }
 }

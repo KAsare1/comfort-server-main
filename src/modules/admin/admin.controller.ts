@@ -2,16 +2,20 @@ import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AdminStatsDto } from './dto/admin-stats.dto';
 import { DriverAssignmentDto } from './dto/driver-assignment.dto';
+import { ApiTags } from '@nestjs/swagger';
+
 // import { RolesGuard } from '@/common/guards/roles.guard';
 // import { Roles } from '@/common/decorators/roles.decorator';
 // import { UserRole } from '@/shared/enums';
 
+@ApiTags('admin')
 @Controller('admin')
 // @UseGuards(RolesGuard)
 // @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
+  @ApiTags('admin')
   @Get('dashboard')
   getDashboardStats(@Query() adminStatsDto: AdminStatsDto) {
     return this.adminService.getDashboardStats(adminStatsDto);
