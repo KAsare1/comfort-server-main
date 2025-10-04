@@ -1,0 +1,37 @@
+import { Payment } from './payment.entity';
+import { TrackingData } from './tracking.entity';
+import { User } from './user.entity';
+import { Driver } from './driver.entity';
+import { BookingStatus, TripType } from 'src/shared/enums';
+export declare class Booking {
+    id: string;
+    reference: string;
+    customer: User;
+    customerId: string;
+    driver: Driver;
+    driverId: string;
+    pickupLocation: string;
+    pickupLatitude: number;
+    pickupLongitude: number;
+    dropoffLocation: string;
+    dropoffLatitude: number;
+    dropoffLongitude: number;
+    pickupTime: string;
+    dropoffTime: string;
+    tripType: TripType;
+    bookingDates: string[];
+    status: BookingStatus;
+    totalAmount: number;
+    distance: number;
+    estimatedDuration: number;
+    scheduledAt: Date;
+    assignedAt: Date;
+    startedAt: Date;
+    completedAt: Date;
+    notes: string;
+    route: Record<string, any>;
+    payment: Payment;
+    trackingData: TrackingData[];
+    createdAt: Date;
+    updatedAt: Date;
+}
