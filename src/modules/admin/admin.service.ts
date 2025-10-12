@@ -24,8 +24,13 @@ export class AdminService {
 
   async getDashboardStats(adminStatsDto: AdminStatsDto) {
     const { range, startDate, endDate } = adminStatsDto;
-    
     const dateRange = this.getDateRange(range ?? StatsTimeRange.TODAY, startDate, endDate);
+
+    // Today, week, month date ranges
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
     // Get all stats in parallel
     const [
@@ -36,6 +41,14 @@ export class AdminService {
       userStats,
       recentBookings,
       activeBookings,
+      bookingsToday,
+      paymentsToday,
+      bookingsWeek,
+      paymentsWeek,
+      bookingsMonth,
+      paymentsMonth,
+      pendingBookings,
+      completedToday,
     ] = await Promise.all([
       this.bookingsService.getBookingStats(dateRange.start, dateRange.end),
       this.paymentsService.getPaymentStats(dateRange.start, dateRange.end),
@@ -44,14 +57,36 @@ export class AdminService {
       this.usersService.getUserStats(),
       this.bookingsService.getRecentBookings(10),
       this.bookingsService.getActiveBookings(),
+      this.bookingsService.getBookingStats(todayStart, now),
+      this.paymentsService.getPaymentStats(todayStart, now),
+      this.bookingsService.getBookingStats(weekStart, now),
+      this.paymentsService.getPaymentStats(weekStart, now),
+      this.bookingsService.getBookingStats(monthStart, now),
+      this.paymentsService.getPaymentStats(monthStart, now),
+      this.bookingsService.findWithPagination({ status: BookingStatus.PENDING, page: 1, limit: 100 }),
+      this.bookingsService.findWithPagination({ status: BookingStatus.COMPLETED, startDate: todayStart.toISOString(), endDate: now.toISOString(), page: 1, limit: 100 }),
     ]);
+
+    // Active vehicles
+    const activeVehicles = vehicleStats.statusCounts?.find(s => s.status === 'active')?.count || 0;
+
+    // Active rides: bookings with status IN_PROGRESS, EN_ROUTE, ARRIVED
+    const activeRides = activeBookings.filter(b => [BookingStatus.IN_PROGRESS, BookingStatus.EN_ROUTE, BookingStatus.ARRIVED].includes(b.status)).length;
 
     return {
       overview: {
-        totalBookings: bookingStats.totalBookings,
-        totalRevenue: paymentStats.totalRevenue,
-        activeBookings: activeBookings.length,
+        totalBookingsToday: bookingsToday.totalBookings,
         availableDrivers: driverStats.statusCounts.find(s => s.status === DriverStatus.AVAILABLE)?.count || 0,
+        activeVehicles,
+        todaysRevenue: paymentsToday.totalRevenue,
+        revenueOverview: {
+          today: paymentsToday.totalRevenue,
+          week: paymentsWeek.totalRevenue,
+          month: paymentsMonth.totalRevenue,
+        },
+        pendingBookings: pendingBookings.data.length,
+        completedToday: completedToday.data.length,
+        activeRides,
       },
       bookings: bookingStats,
       payments: paymentStats,
