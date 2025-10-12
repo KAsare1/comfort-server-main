@@ -85,17 +85,17 @@ export class AdminService {
         selectedDriverId = driverId;
         break;
         
-      case AssignmentStrategy.NEAREST:
-        selectedDriverId = await this.findNearestDriver(booking.pickupLatitude, booking.pickupLongitude);
-        break;
+      // case AssignmentStrategy.NEAREST:
+      //   selectedDriverId = await this.findNearestDriver(booking.pickupLatitude, booking.pickupLongitude);
+      //   break;
         
       case AssignmentStrategy.ROUND_ROBIN:
         selectedDriverId = await this.findRoundRobinDriver();
         break;
         
-      case AssignmentStrategy.RATING_BASED:
-        selectedDriverId = await this.findHighestRatedDriver(booking.pickupLatitude, booking.pickupLongitude);
-        break;
+      // case AssignmentStrategy.RATING_BASED:
+      //   selectedDriverId = await this.findHighestRatedDriver(booking.pickupLatitude, booking.pickupLongitude);
+      //   break;
         
       default:
         throw new BadRequestException('Invalid assignment strategy');

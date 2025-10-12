@@ -1,109 +1,105 @@
-import { IsString, IsNumber, IsArray, IsEnum, IsOptional, IsDateString, Matches } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsOptional, IsNumber, IsDateString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { TripType } from 'src/shared/enums';
+import { PaymentMethod } from 'src/shared/enums';
 
 export class CreateBookingDto {
-  @ApiProperty({
-    description: 'The name of the customer',
-    example: 'Ama Asante',
-  })
+  /**
+   * The name of the customer
+   * @example "Ama Asante"
+   */
+  @ApiProperty({ description: 'The name of the customer', example: 'Ama Asante' })
   @IsString()
+  @IsNotEmpty()
   name: string;
 
-  @ApiProperty({
-    description: 'The phone number of the customer (Ghana format)',
-    example: '+233201234567',
-    pattern: '^\\+233[0-9]{9}$',
-  })
+  /**
+   * The phone number of the customer (Ghana format)
+   * @example "+233201234567"
+   */
+  @ApiProperty({ description: 'The phone number of the customer (Ghana format)', example: '+233201234567', pattern: '^\\+233[0-9]{9}$' })
   @IsString()
-  @Matches(/^\+233[0-9]{9}$/, { message: 'Phone must be a valid Ghanaian number (+233XXXXXXXXX)' })
+  @IsNotEmpty()
   phone: string;
 
-  @ApiProperty({
-    description: 'The pickup location address',
-    example: 'Kotoka International Airport, Accra',
-  })
+  /**
+   * Main pickup location (e.g., "Sofoline")
+   * @example "Sofoline"
+   */
+  @ApiProperty({ description: 'Main pickup location', example: 'Sofoline' })
   @IsString()
+  @IsNotEmpty()
   pickupLocation: string;
 
-  @ApiProperty({
-    description: 'The pickup location latitude',
-    example: 5.6037,
-  })
-  @IsNumber()
-  pickupLatitude: number;
-
-  @ApiProperty({
-    description: 'The pickup location longitude',
-    example: -0.1670,
-  })
-  @IsNumber()
-  pickupLongitude: number;
-
-  @ApiProperty({
-    description: 'The dropoff location address',
-    example: 'Kwame Nkrumah Circle, Accra',
-  })
+  /**
+   * Specific pickup stop (e.g., "Sofoline Main Station")
+   * @example "Sofoline Main Station"
+   */
+  @ApiProperty({ description: 'Specific pickup stop', example: 'Sofoline Main Station' })
   @IsString()
+  @IsNotEmpty()
+  pickupStop: string;
+
+  /**
+   * Main dropoff location
+   * @example "Adum"
+   */
+  @ApiProperty({ description: 'Main dropoff location', example: 'Adum' })
+  @IsString()
+  @IsNotEmpty()
   dropoffLocation: string;
 
-  @ApiProperty({
-    description: 'The dropoff location latitude',
-    example: 5.5560,
-  })
-  @IsNumber()
-  dropoffLatitude: number;
-
-  @ApiProperty({
-    description: 'The dropoff location longitude',
-    example: -0.1969,
-  })
-  @IsNumber()
-  dropoffLongitude: number;
-
-  @ApiProperty({
-    description: 'The pickup time in HH:MM format',
-    example: '14:30',
-    pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$',
-  })
+  /**
+   * Specific dropoff stop
+   * @example "Adum Market"
+   */
+  @ApiProperty({ description: 'Specific dropoff stop', example: 'Adum Market' })
   @IsString()
-  @Matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: 'pickupTime must be in HH:MM format' })
-  pickupTime: string;
+  @IsNotEmpty()
+  dropoffStop: string;
 
-  @ApiProperty({
-    description: 'The dropoff time in HH:MM format',
-    example: '15:30',
-    pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]$',
-    required: false,
-  })
+  /**
+   * Departure time range (e.g., "05:30-05:45")
+   * @example "05:30-05:45"
+   */
+  @ApiProperty({ description: 'Departure time range', example: '05:30-05:45', pattern: '^[0-2][0-9]:[0-5][0-9]-[0-2][0-9]:[0-5][0-9]$' })
   @IsString()
-  @IsOptional()
-  @Matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, { message: 'dropoffTime must be in HH:MM format' })
-  dropoffTime?: string;
+  @IsNotEmpty()
+  departureTime: string;
 
-  @ApiProperty({
-    description: 'The type of trip',
-    enum: TripType,
-    example: TripType.SINGLE,
-  })
+  /**
+   * Departure date (YYYY-MM-DD)
+   * @example "2025-10-15"
+   */
+  @ApiProperty({ description: 'Departure date (YYYY-MM-DD)', example: '2025-10-15', pattern: '^\\d{4}-\\d{2}-\\d{2}$' })
+  @IsDateString()
+  @IsNotEmpty()
+  departureDate: string;
+
+  /**
+   * Type of trip
+   * @example TripType.ONE_WAY
+   */
+  @ApiProperty({ description: 'Type of trip', enum: TripType, example: TripType.ONE_WAY })
   @IsEnum(TripType)
+  @IsNotEmpty()
   tripType: TripType;
 
-  @ApiProperty({
-    description: 'Array of booking dates in ISO format',
-    example: ['2025-10-15', '2025-10-16'],
-    type: [String],
-  })
-  @IsArray()
-  @IsDateString({}, { each: true })
-  bookingDates: string[];
-
-  @ApiProperty({
-    description: 'Additional notes or special requests for the booking',
-    example: 'Please bring a child seat',
-    required: false,
-  })
+  /**
+   * Additional notes or special requests
+   * @example "Please bring a child seat"
+   */
+  @ApiProperty({ description: 'Additional notes or special requests', example: 'Please bring a child seat', required: false })
   @IsString()
   @IsOptional()
   notes?: string;
+
+  /**
+   * Payment method (momo, visa, mastercard)
+   * @example PaymentMethod.MOMO
+   */
+  @ApiProperty({ description: 'Payment method', enum: PaymentMethod, required: false })
+  @IsEnum(PaymentMethod)
+  @IsOptional()
+  paymentMethod?: PaymentMethod;
 }

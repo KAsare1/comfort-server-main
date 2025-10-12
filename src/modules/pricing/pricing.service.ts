@@ -1,165 +1,162 @@
-import { Injectable } from '@nestjs/common';
-import { CalculatePriceDto } from './dto/calculate-price.dto';
-
-import { LocationsService } from '../locations/locations.service';
-import { DistanceCalculator } from 'src/common/utils/distance.calculator';
-import { PRICING_CONSTANTS } from 'src/common/constants/pricing.constants';
+// src/modules/pricing/pricing.service.ts
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { TripType } from 'src/shared/enums';
 
 @Injectable()
 export class PricingService {
-  constructor(private locationsService: LocationsService) {}
+  // Pricing matrix matching frontend - Single source of truth
+  private readonly pricingMatrix: Record<string, Record<string, number>> = {
+    'Abuakwa': { 
+      'Adum': 10, 
+      'Kejetia': 9, 
+      'Sofoline': 7, 
+      'Kwadaso': 7, 
+      'Asuoyeboah': 6, 
+      'Tanoso': 6 
+    },
+    'Tanoso': { 
+      'Adum': 8, 
+      'Kejetia': 7, 
+      'Sofoline': 6, 
+      'Kwadaso': 5, 
+      'Asuoyeboah': 5 
+    },
+    'Asuoyeboah': { 
+      'Adum': 6, 
+      'Kejetia': 5, 
+      'Kwadaso': 5, 
+      'Sofoline': 5 
+    },
+    'Kwadaso': { 
+      'Adum': 6, 
+      'Kejetia': 5, 
+      'Sofoline': 5 
+    }
+  };
 
-  async calculateBookingPrice(calculateDto: CalculatePriceDto) {
-    const {
-      pickupLatitude,
-      pickupLongitude,
-      dropoffLatitude,
-      dropoffLongitude,
-      tripType,
-      bookingDates,
-      pickupTime,
-      estimatedDuration,
-      distance,
-    } = calculateDto;
+  // All available locations
+  private readonly locations = [
+    'Sofoline', 
+    'Kwadaso', 
+    'Asuoyeboah', 
+    'Tanoso', 
+    'Abuakwa', 
+    'Adum', 
+    'Kejetia'
+  ];
 
-    // Calculate distance if not provided
-    let calculatedDistance = distance;
-    if (!calculatedDistance) {
-      calculatedDistance = DistanceCalculator.haversineDistance(
-        pickupLatitude,
-        pickupLongitude,
-        dropoffLatitude,
-        dropoffLongitude,
+  /**
+   * Get base fare between two locations (one-way)
+   */
+  getBaseFare(pickupLocation: string, dropoffLocation: string): number {
+    if (!pickupLocation || !dropoffLocation) {
+      throw new BadRequestException('Pickup and dropoff locations are required');
+    }
+
+    if (pickupLocation === dropoffLocation) {
+      throw new BadRequestException('Pickup and dropoff locations cannot be the same');
+    }
+
+    // Check direct route
+    let fare = this.pricingMatrix[pickupLocation]?.[dropoffLocation];
+
+    // Check reverse route (same price both ways)
+    if (!fare) {
+      fare = this.pricingMatrix[dropoffLocation]?.[pickupLocation];
+    }
+
+    if (!fare) {
+      throw new BadRequestException(
+        `Route not available between ${pickupLocation} and ${dropoffLocation}`
       );
     }
 
-    // Get more accurate route information
-    let routeInfo;
-    try {
-      routeInfo = await this.locationsService.getRoute(
-        [pickupLongitude, pickupLatitude],
-        [dropoffLongitude, dropoffLatitude],
-      );
-      calculatedDistance = routeInfo.distance;
-    } catch (error) {
-      // Fallback to straight-line distance if route calculation fails
-      console.warn('Route calculation failed, using straight-line distance:', error.message);
-    }
-
-    // Base pricing calculation
-    let basePrice = PRICING_CONSTANTS.BASE_PRICE;
-
-    // Apply trip type multiplier
-    if (tripType === TripType.ROUND) {
-      basePrice *= PRICING_CONSTANTS.ROUND_TRIP_MULTIPLIER;
-    }
-
-    // Distance-based pricing
-    const distancePrice = calculatedDistance * PRICING_CONSTANTS.DISTANCE_RATE_PER_KM;
-
-    // Time-based pricing (if estimated duration provided)
-    let timePrice = 0;
-    if (estimatedDuration) {
-      timePrice = estimatedDuration * PRICING_CONSTANTS.TIME_RATE_PER_MINUTE;
-    }
-
-    // Peak hour multiplier
-    const isPeakHour = this.isPeakHour(pickupTime);
-    let peakMultiplier = 1;
-    if (isPeakHour) {
-      peakMultiplier = PRICING_CONSTANTS.PEAK_HOUR_MULTIPLIER;
-    }
-
-    // Calculate daily rate
-    const dailyRate = Math.max(
-      (basePrice + distancePrice + timePrice) * peakMultiplier,
-      PRICING_CONSTANTS.MINIMUM_FARE,
-    );
-
-    // Apply daily cap
-    const cappedDailyRate = Math.min(dailyRate, PRICING_CONSTANTS.MAXIMUM_FARE);
-
-    // Total for all booking dates
-    const totalAmount = cappedDailyRate * bookingDates.length;
-
-    return {
-      totalAmount: Math.round(totalAmount * 100) / 100, // Round to 2 decimal places
-      dailyRate: Math.round(cappedDailyRate * 100) / 100,
-      breakdown: {
-        basePrice,
-        distancePrice: Math.round(distancePrice * 100) / 100,
-        timePrice: Math.round(timePrice * 100) / 100,
-        peakMultiplier,
-        isPeakHour,
-        distance: calculatedDistance,
-        estimatedDuration: routeInfo?.duration || estimatedDuration,
-        numberOfDays: bookingDates.length,
-      },
-    };
+    return fare;
   }
 
-  private isPeakHour(timeString: string): boolean {
-    const [hours, minutes] = timeString.split(':').map(Number);
-    const timeInMinutes = hours * 60 + minutes;
-
-    return PRICING_CONSTANTS.PEAK_HOURS.some(peak => {
-      const [startHours, startMinutes] = peak.start.split(':').map(Number);
-      const [endHours, endMinutes] = peak.end.split(':').map(Number);
-      
-      const startTimeInMinutes = startHours * 60 + startMinutes;
-      const endTimeInMinutes = endHours * 60 + endMinutes;
-
-      return timeInMinutes >= startTimeInMinutes && timeInMinutes <= endTimeInMinutes;
-    });
+  /**
+   * Calculate total fare including trip type multiplier
+   */
+  calculateFare(
+    pickupLocation: string,
+    dropoffLocation: string,
+    tripType: TripType
+  ): number {
+    const baseFare = this.getBaseFare(pickupLocation, dropoffLocation);
+    const multiplier = tripType === TripType.ROUND_TRIP ? 2 : 1;
+    return baseFare * multiplier;
   }
 
-  async getEstimatedFare(
-    pickupLat: number,
-    pickupLng: number,
-    dropoffLat: number,
-    dropoffLng: number,
-    tripType: TripType = TripType.SINGLE,
+  /**
+   * Get fare estimate with breakdown
+   */
+  getFareEstimate(
+    pickupLocation: string,
+    dropoffLocation: string,
+    tripType: TripType
   ) {
-    // Quick estimate without full calculation
-    const distance = DistanceCalculator.haversineDistance(
-      pickupLat,
-      pickupLng,
-      dropoffLat,
-      dropoffLng,
-    );
-
-    let basePrice = PRICING_CONSTANTS.BASE_PRICE;
-    if (tripType === TripType.ROUND) {
-      basePrice *= PRICING_CONSTANTS.ROUND_TRIP_MULTIPLIER;
-    }
-
-    const distancePrice = distance * PRICING_CONSTANTS.DISTANCE_RATE_PER_KM;
-    const estimatedFare = Math.max(
-      basePrice + distancePrice,
-      PRICING_CONSTANTS.MINIMUM_FARE,
-    );
+    const baseFare = this.getBaseFare(pickupLocation, dropoffLocation);
+    const multiplier = tripType === TripType.ROUND_TRIP ? 2 : 1;
+    const totalFare = baseFare * multiplier;
 
     return {
-      estimatedFare: Math.round(estimatedFare * 100) / 100,
-      distance,
-      priceRange: {
-        min: Math.round(estimatedFare * 100) / 100,
-        max: Math.round((estimatedFare * PRICING_CONSTANTS.PEAK_HOUR_MULTIPLIER) * 100) / 100,
-      },
+      fare: totalFare,
+      baseFare,
+      tripType,
+      multiplier,
+      breakdown: {
+        oneWayFare: baseFare,
+        roundTripMultiplier: tripType === TripType.ROUND_TRIP ? 2 : 1,
+        totalFare,
+      }
     };
   }
 
-  getPricingConstants() {
-    return PRICING_CONSTANTS;
+  /**
+   * Get all available locations
+   */
+  getAvailableLocations(): string[] {
+    return this.locations;
   }
 
-  async updatePricingConstants(updates: Partial<typeof PRICING_CONSTANTS>) {
-    // In a real implementation, you'd store these in the database
-    // For now, return the updated constants
+  /**
+   * Get all available routes and their prices
+   */
+  getAllRoutes() {
+    const routes: Array<{
+      from: string;
+      to: string;
+      fare: number;
+    }> = [];
+
+    for (const [from, destinations] of Object.entries(this.pricingMatrix)) {
+      for (const [to, fare] of Object.entries(destinations)) {
+        routes.push({ from, to, fare });
+      }
+    }
+
+    return routes;
+  }
+
+  /**
+   * Check if a route exists between two locations
+   */
+  isRouteAvailable(pickupLocation: string, dropoffLocation: string): boolean {
+    if (pickupLocation === dropoffLocation) return false;
+    
+    const hasDirect = !!this.pricingMatrix[pickupLocation]?.[dropoffLocation];
+    const hasReverse = !!this.pricingMatrix[dropoffLocation]?.[pickupLocation];
+    
+    return hasDirect || hasReverse;
+  }
+
+  /**
+   * Get pricing matrix (for admin purposes)
+   */
+  getPricingMatrix() {
     return {
-      ...PRICING_CONSTANTS,
-      ...updates,
+      matrix: this.pricingMatrix,
+      locations: this.locations,
     };
   }
 }

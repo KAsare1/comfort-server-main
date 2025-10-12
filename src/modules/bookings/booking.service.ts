@@ -1,47 +1,69 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { Booking } from 'src/database/entities/booking.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { Generators } from 'src/common/utils/generator';
-import { BookingStatus } from 'src/shared/enums';
-import { PricingService } from '../pricing/pricing.service';
-import { LocationsService } from '../locations/locations.service';
-
+import { BookingStatus, TripType, PaymentMethod } from 'src/shared/enums';
+import { PaymentsService } from '../payments/payments.service';
+import { SmsService } from '../notifications/sms/sms.service';
 
 @Injectable()
 export class BookingsService {
+  // Pricing matrix matching frontend
+  private readonly pricingMatrix: Record<string, Record<string, number>> = {
+    'Abuakwa': { 'Adum': 10, 'Kejetia': 9, 'Sofoline': 7, 'Kwadaso': 7, 'Asuoyeboah': 6, 'Tanoso': 6 },
+    'Tanoso': { 'Adum': 8, 'Kejetia': 7, 'Sofoline': 6, 'Kwadaso': 5, 'Asuoyeboah': 5 },
+    'Asuoyeboah': { 'Adum': 6, 'Kejetia': 5, 'Kwadaso': 5, 'Sofoline': 5 },
+    'Kwadaso': { 'Adum': 6, 'Kejetia': 5, 'Sofoline': 5 }
+  };
+
   constructor(
     @InjectRepository(Booking)
     private bookingsRepository: Repository<Booking>,
     private usersService: UsersService,
-    private pricingService: PricingService,
-    private locationsService: LocationsService,
+    @Inject(forwardRef(() => PaymentsService))
+    private paymentsService: PaymentsService,
+    private smsService: SmsService,
   ) {}
 
-  async create(createBookingDto: CreateBookingDto): Promise<Booking> {
+  /**
+   * Calculate fare based on pickup and dropoff locations
+   */
+  private calculateFare(pickupLocation: string, dropoffLocation: string, tripType: TripType): number {
+    if (!pickupLocation || !dropoffLocation || pickupLocation === dropoffLocation) {
+      return 0;
+    }
+
+    // Check direct route
+    let fare = this.pricingMatrix[pickupLocation]?.[dropoffLocation];
+
+    // Check reverse route (same price both ways)
+    if (!fare) {
+      fare = this.pricingMatrix[dropoffLocation]?.[pickupLocation];
+    }
+
+    if (!fare) {
+      throw new BadRequestException('Route not available between selected locations');
+    }
+
+    // Double fare for round trips
+    return tripType === TripType.ROUND_TRIP ? fare * 2 : fare;
+  }
+
+  async create(createBookingDto: CreateBookingDto): Promise<{ booking: Booking; paymentInitResponse?: any }> {
     // Find or create user
     const user = await this.usersService.findOrCreate({
       name: createBookingDto.name,
       phone: createBookingDto.phone,
     });
 
-    // Calculate pricing
-    const pricing = await this.pricingService.calculateBookingPrice({
-      pickupLatitude: createBookingDto.pickupLatitude,
-      pickupLongitude: createBookingDto.pickupLongitude,
-      dropoffLatitude: createBookingDto.dropoffLatitude,
-      dropoffLongitude: createBookingDto.dropoffLongitude,
-      tripType: createBookingDto.tripType,
-      bookingDates: createBookingDto.bookingDates,
-      pickupTime: createBookingDto.pickupTime,
-    });
-
-    // Get route information
-    const route = await this.locationsService.getRoute(
-      [createBookingDto.pickupLongitude, createBookingDto.pickupLatitude],
-      [createBookingDto.dropoffLongitude, createBookingDto.dropoffLatitude],
+    // Calculate fare
+    const totalAmount = this.calculateFare(
+      createBookingDto.pickupLocation,
+      createBookingDto.dropoffLocation,
+      createBookingDto.tripType
     );
 
     // Create booking
@@ -49,24 +71,54 @@ export class BookingsService {
       reference: Generators.generateBookingReference(),
       customerId: user.id,
       pickupLocation: createBookingDto.pickupLocation,
-      pickupLatitude: createBookingDto.pickupLatitude,
-      pickupLongitude: createBookingDto.pickupLongitude,
+      pickupStop: createBookingDto.pickupStop,
       dropoffLocation: createBookingDto.dropoffLocation,
-      dropoffLatitude: createBookingDto.dropoffLatitude,
-      dropoffLongitude: createBookingDto.dropoffLongitude,
-      pickupTime: createBookingDto.pickupTime,
-      dropoffTime: createBookingDto.dropoffTime,
+      dropoffStop: createBookingDto.dropoffStop,
+      departureTime: createBookingDto.departureTime,
+      departureDate: createBookingDto.departureDate,
       tripType: createBookingDto.tripType,
-      bookingDates: createBookingDto.bookingDates,
-      totalAmount: pricing.totalAmount,
-      distance: route.distance,
-      estimatedDuration: route.duration,
-      route: route.geometry,
+      totalAmount,
       notes: createBookingDto.notes,
       status: BookingStatus.PENDING,
     });
 
-    return this.bookingsRepository.save(booking);
+    const savedBooking = await this.bookingsRepository.save(booking);
+
+    let paymentInitResponse: any = undefined;
+    // Initialize payment if paymentMethod is provided
+    if (createBookingDto.paymentMethod === PaymentMethod.MOMO || createBookingDto.paymentMethod === PaymentMethod.VISA || createBookingDto.paymentMethod === PaymentMethod.MASTERCARD) {
+      paymentInitResponse = await this.paymentsService.initializePayment({
+        bookingId: savedBooking.id,
+        amount: totalAmount,
+        method: createBookingDto.paymentMethod,
+        customerEmail: user.email || `${user.phone}@comfort.com`,
+        callbackUrl: '', // Set callback URL as needed
+      });
+
+      // Send SMS after payment initialization
+      const smsMessage = this.smsService.getBookingConfirmationMessage(
+        savedBooking.reference,
+        savedBooking.departureTime,
+        savedBooking.pickupLocation
+      );
+      await this.smsService.sendSms(
+        user.phone,
+        smsMessage
+      );
+    } else {
+      // Send SMS for bookings without payment (e.g., pay later)
+      const smsMessage = this.smsService.getBookingConfirmationMessage(
+        savedBooking.reference,
+        savedBooking.departureTime,
+        savedBooking.pickupLocation
+      );
+      await this.smsService.sendSms(
+        user.phone,
+        smsMessage
+      );
+    }
+
+    return { booking: savedBooking, paymentInitResponse };
   }
 
   async findAll(): Promise<Booking[]> {
@@ -173,21 +225,26 @@ export class BookingsService {
 
   async getBookingStats(startDate?: Date, endDate?: Date) {
     const query = this.bookingsRepository.createQueryBuilder('booking');
+    
     if (startDate) {
       query.andWhere('booking.createdAt >= :startDate', { startDate });
     }
     if (endDate) {
       query.andWhere('booking.createdAt <= :endDate', { endDate });
     }
+
     const totalBookings = await query.getCount();
+    
     const statusCounts = await query
       .select('booking.status, COUNT(booking.id) as count')
       .groupBy('booking.status')
       .getRawMany();
+    
     const totalRevenue = await query
       .select('SUM(booking.totalAmount)', 'total')
       .where('booking.status = :status', { status: BookingStatus.COMPLETED })
       .getRawOne();
+
     return {
       totalBookings,
       statusCounts,
@@ -197,28 +254,36 @@ export class BookingsService {
 
   async findWithPagination(queryDto: import('./dto/booking-query.dto').BookingQueryDto) {
     const { page = 1, limit = 10, status, tripType, customerId, driverId, startDate, endDate, search } = queryDto;
+    
     const query = this.bookingsRepository.createQueryBuilder('booking')
       .leftJoinAndSelect('booking.customer', 'customer')
       .leftJoinAndSelect('booking.driver', 'driver')
       .leftJoinAndSelect('driver.vehicle', 'vehicle')
       .leftJoinAndSelect('booking.payment', 'payment');
+
     if (status) query.andWhere('booking.status = :status', { status });
     if (tripType) query.andWhere('booking.tripType = :tripType', { tripType });
     if (customerId) query.andWhere('booking.customerId = :customerId', { customerId });
     if (driverId) query.andWhere('booking.driverId = :driverId', { driverId });
     if (startDate) query.andWhere('booking.createdAt >= :startDate', { startDate: new Date(startDate) });
     if (endDate) query.andWhere('booking.createdAt <= :endDate', { endDate: new Date(endDate) });
-    if (search) query.andWhere(
-      '(booking.reference ILIKE :search OR booking.pickupLocation ILIKE :search OR booking.dropoffLocation ILIKE :search OR customer.name ILIKE :search)',
-      { search: `%${search}%` }
-    );
+    
+    if (search) {
+      query.andWhere(
+        '(booking.reference ILIKE :search OR booking.pickupLocation ILIKE :search OR booking.pickupStop ILIKE :search OR booking.dropoffLocation ILIKE :search OR booking.dropoffStop ILIKE :search OR customer.name ILIKE :search)',
+        { search: `%${search}%` }
+      );
+    }
+
     const total = await query.getCount();
     const bookings = await query
       .orderBy('booking.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit)
       .getMany();
+
     const totalPages = Math.ceil(total / limit);
+
     return {
       data: bookings,
       pagination: {
@@ -241,14 +306,20 @@ export class BookingsService {
   }
 
   async getUpcomingBookings(): Promise<Booking[]> {
-    return this.bookingsRepository.find({
-      where: [
-        { status: BookingStatus.CONFIRMED },
-        { status: BookingStatus.ASSIGNED },
-      ],
-      relations: ['customer', 'driver', 'driver.vehicle'],
-      order: { scheduledAt: 'ASC' },
-    });
+    const today = new Date().toISOString().split('T')[0];
+    
+    return this.bookingsRepository
+      .createQueryBuilder('booking')
+      .where('booking.departureDate >= :today', { today })
+      .andWhere('booking.status IN (:...statuses)', { 
+        statuses: [BookingStatus.CONFIRMED, BookingStatus.ASSIGNED, BookingStatus.PENDING] 
+      })
+      .leftJoinAndSelect('booking.customer', 'customer')
+      .leftJoinAndSelect('booking.driver', 'driver')
+      .leftJoinAndSelect('driver.vehicle', 'vehicle')
+      .orderBy('booking.departureDate', 'ASC')
+      .addOrderBy('booking.departureTime', 'ASC')
+      .getMany();
   }
 
   async getRecentBookings(limit: number = 10): Promise<Booking[]> {
@@ -261,19 +332,38 @@ export class BookingsService {
 
   async updateBookingLocation(id: string, locationData: {
     pickupLocation?: string;
-    pickupLatitude?: number;
-    pickupLongitude?: number;
+    pickupStop?: string;
     dropoffLocation?: string;
-    dropoffLatitude?: number;
-    dropoffLongitude?: number;
+    dropoffStop?: string;
   }): Promise<Booking> {
     const booking = await this.findById(id);
+    
     if (booking.status !== BookingStatus.PENDING) {
       throw new BadRequestException('Can only update location for pending bookings');
     }
-    await this.bookingsRepository.update(id, locationData);
+
+    // Recalculate fare if locations changed
+    if (locationData.pickupLocation || locationData.dropoffLocation) {
+      const newPickup = locationData.pickupLocation || booking.pickupLocation;
+      const newDropoff = locationData.dropoffLocation || booking.dropoffLocation;
+      
+      const totalAmount = this.calculateFare(newPickup, newDropoff, booking.tripType);
+      await this.bookingsRepository.update(id, { ...locationData, totalAmount });
+    } else {
+      await this.bookingsRepository.update(id, locationData);
+    }
+
     return this.findById(id);
   }
+
+  /**
+   * Get bookings for a specific departure date
+   */
+  async getBookingsByDepartureDate(departureDate: string): Promise<Booking[]> {
+    return this.bookingsRepository.find({
+      where: { departureDate },
+      relations: ['customer', 'driver', 'driver.vehicle'],
+      order: { departureTime: 'ASC' },
+    });
+  }
 }
-
-

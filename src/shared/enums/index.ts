@@ -10,8 +10,8 @@ export enum BookingStatus {
 }
 
 export enum TripType {
-  SINGLE = 'single',
-  ROUND = 'round',
+  ONE_WAY = 'one-way',
+  ROUND_TRIP = 'round-trip'
 }
 
 export enum PaymentStatus {

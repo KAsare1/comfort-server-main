@@ -6,7 +6,6 @@ import { User } from './user.entity';
 import { Driver } from './driver.entity';
 import { BookingStatus, TripType } from 'src/shared/enums';
 
-
 @Entity('bookings')
 export class Booking {
   @PrimaryGeneratedColumn('uuid')
@@ -29,58 +28,43 @@ export class Booking {
   @Column({ name: 'driver_id', nullable: true })
   driverId: string;
 
-  @Column({ type: 'varchar', length: 200 })
-  pickupLocation: string;
+  // Pickup location fields
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  pickupLocation: string; // Main location (e.g., "Sofoline", "Kwadaso")
 
-  @Column({ type: 'decimal', precision: 10, scale: 8 })
-  pickupLatitude: number;
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  pickupStop: string; // Specific stop (e.g., "Sofoline Main Station")
 
-  @Column({ type: 'decimal', precision: 11, scale: 8 })
-  pickupLongitude: number;
+  // Dropoff location fields
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  dropoffLocation: string; // Main location
 
-  @Column({ type: 'varchar', length: 200 })
-  dropoffLocation: string;
+  @Column({ type: 'varchar', length: 200, nullable: true })
+  dropoffStop: string; // Specific stop
 
-  @Column({ type: 'decimal', precision: 10, scale: 8 })
-  dropoffLatitude: number;
+  // Time and date fields
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  departureTime: string; // Time range (e.g., "05:30-05:45")
 
-  @Column({ type: 'decimal', precision: 11, scale: 8 })
-  dropoffLongitude: number;
+  @Column({ type: 'date', nullable: true })
+  departureDate: string; // Departure date (YYYY-MM-DD)
 
-  @Column({ type: 'time' })
-  pickupTime: string;
-
-  @Column({ type: 'time', nullable: true })
-  dropoffTime: string;
-
-  @Column({ 
-    type: 'enum', 
-    enum: TripType, 
-    default: TripType.SINGLE 
+  @Column({
+    type: 'enum',
+    enum: TripType,
+    nullable: false,
   })
   tripType: TripType;
 
-  @Column({ type: 'jsonb' })
-  bookingDates: string[]; // Array of date strings
-
-  @Column({ 
-    type: 'enum', 
-    enum: BookingStatus, 
-    default: BookingStatus.PENDING 
+  @Column({
+    type: 'enum',
+    enum: BookingStatus,
+    default: BookingStatus.PENDING
   })
   status: BookingStatus;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   totalAmount: number;
-
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
-  distance: number; // in kilometers
-
-  @Column({ type: 'int', nullable: true })
-  estimatedDuration: number; // in minutes
-
-  @Column({ type: 'timestamp', nullable: true })
-  scheduledAt: Date;
 
   @Column({ type: 'timestamp', nullable: true })
   assignedAt: Date;
@@ -93,9 +77,6 @@ export class Booking {
 
   @Column({ type: 'text', nullable: true })
   notes: string;
-
-  @Column({ type: 'jsonb', nullable: true })
-  route: Record<string, any>; // Mapbox route data
 
   @OneToOne(() => Payment, payment => payment.booking)
   payment: Payment;

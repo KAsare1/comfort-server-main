@@ -120,10 +120,10 @@ async getActiveBookingLocation(bookingReference: string): Promise<{
       status: booking.status,
       pickupLocation: booking.pickupLocation,
       dropoffLocation: booking.dropoffLocation,
-      pickupLatitude: booking.pickupLatitude,
-      pickupLongitude: booking.pickupLongitude,
-      dropoffLatitude: booking.dropoffLatitude,
-      dropoffLongitude: booking.dropoffLongitude,
+      // pickupLatitude: booking.pickupLatitude,
+      // pickupLongitude: booking.pickupLongitude,
+      // dropoffLatitude: booking.dropoffLatitude,
+      // dropoffLongitude: booking.dropoffLongitude,
       driver: {
         id: booking.driver.id,
         name: booking.driver.name,
@@ -132,7 +132,7 @@ async getActiveBookingLocation(bookingReference: string): Promise<{
       },
     },
     latestLocation,
-    route: booking.route,
+    route: booking.dropoffLocation,
   };
 }
 

@@ -8,6 +8,6 @@ import { EmailService } from './email/email.service';
 @Module({
   controllers: [NotificationsController],
   providers: [NotificationsService, SmsService, ArkeselService, EmailService],
-  exports: [NotificationsService],
+  exports: [NotificationsService, SmsService],
 })
 export class NotificationsModule {}

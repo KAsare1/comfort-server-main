@@ -6,6 +6,9 @@ import { LocationsModule } from '../locations/locations.module';
 import { Booking } from 'src/database/entities/booking.entity';
 import { BookingsController } from './booking.controller';
 import { BookingsService } from './booking.service';
+import { forwardRef } from '@nestjs/common';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [
@@ -13,6 +16,8 @@ import { BookingsService } from './booking.service';
     UsersModule,
     PricingModule,
     LocationsModule,
+    NotificationsModule,
+  forwardRef(() => PaymentsModule),
   ],
   controllers: [BookingsController],
   providers: [BookingsService],

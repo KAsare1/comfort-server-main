@@ -4,8 +4,9 @@ import axios, { AxiosInstance } from 'axios';
 import { getArkeselConfig } from 'src/config/arkesel.config';
 
 interface ArkeselSmsResponse {
-  code: string;
-  message: string;
+  code?: string;
+  message?: string;
+  status?: string;
   data?: any;
 }
 
@@ -55,19 +56,34 @@ export class ArkeselService {
         recipients: [formattedNumber],
       });
 
-      if (response.data.code === '1000' || response.data.code === '1100') {
+      if (
+        response.data.code === '1000' ||
+        response.data.code === '1100' ||
+        response.data.status === 'success'
+      ) {
+        // If response.data.data is an array, get the first id
+        let messageId = 'N/A';
+        if (Array.isArray(response.data.data) && response.data.data.length > 0) {
+          messageId = response.data.data[0].id;
+        } else if (response.data.data?.id) {
+          messageId = response.data.data.id;
+        }
         return {
           success: true,
-          messageId: response.data.data?.id || 'N/A',
+          messageId,
           status: 'sent',
           provider: 'arkesel',
           recipient: formattedNumber,
         };
       } else {
+        console.error('Arkesel API Error Response:', response.data);
         throw new Error(response.data.message || 'SMS sending failed');
       }
     } catch (error) {
-      console.error('Arkesel SMS Error:', error.response?.data || error.message);
+      console.error('Arkesel SMS Error:', error);
+      if (error.response) {
+        console.error('Arkesel Error Response Data:', error.response.data);
+      }
       throw new HttpException(
         `SMS sending failed: ${error.response?.data?.message || error.message}`,
         HttpStatus.BAD_REQUEST,
