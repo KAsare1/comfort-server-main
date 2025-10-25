@@ -54,6 +54,32 @@ export class CreateVehicleDto {
   capacity: number;
 
   @ApiProperty({
+    description: 'Total number of seats in the vehicle',
+    example: 4,
+    minimum: 1,
+    maximum: 20,
+    required: false,
+  })
+  @IsNumber()
+  @Min(1)
+  @Max(20)
+  @IsOptional()
+  totalSeats?: number;
+
+  @ApiProperty({
+    description: 'Number of seats currently available',
+    example: 4,
+    minimum: 0,
+    maximum: 20,
+    required: false,
+  })
+  @IsNumber()
+  @Min(0)
+  @Max(20)
+  @IsOptional()
+  seatsAvailable?: number;
+
+  @ApiProperty({
     description: 'The current status of the vehicle',
     enum: VehicleStatus,
     default: VehicleStatus.ACTIVE,

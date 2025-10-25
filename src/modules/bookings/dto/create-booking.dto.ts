@@ -1,9 +1,18 @@
+// ...existing code...
 import { IsString, IsNotEmpty, IsEnum, IsOptional, IsNumber, IsDateString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { TripType } from 'src/shared/enums';
 import { PaymentMethod } from 'src/shared/enums';
 
 export class CreateBookingDto {
+  /**
+   * Number of seats to book
+   * @example 2
+   */
+  @ApiProperty({ description: 'Number of seats to book', example: 2, minimum: 1, required: false })
+  @IsNumber()
+  @IsOptional()
+  seatsBooked?: number;
   /**
    * The name of the customer
    * @example "Ama Asante"

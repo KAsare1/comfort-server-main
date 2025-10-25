@@ -26,6 +26,12 @@ export class Vehicle {
   @Column({ type: 'int', default: 4 })
   capacity: number;
 
+  @Column({ type: 'int', default: 4 })
+  totalSeats: number;
+
+  @Column({ type: 'int', default: 4 })
+  seatsAvailable: number;
+
   @Column({ 
     type: 'enum', 
     enum: VehicleStatus, 

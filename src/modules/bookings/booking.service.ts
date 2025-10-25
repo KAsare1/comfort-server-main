@@ -8,6 +8,8 @@ import { Generators } from 'src/common/utils/generator';
 import { BookingStatus, TripType, PaymentMethod } from 'src/shared/enums';
 import { PaymentsService } from '../payments/payments.service';
 import { SmsService } from '../notifications/sms/sms.service';
+import { VehiclesService } from '../vehicle/vehicle.service';
+import { DriversService } from '../drivers/drivers.service';
 
 @Injectable()
 export class BookingsService {
@@ -26,6 +28,8 @@ export class BookingsService {
     @Inject(forwardRef(() => PaymentsService))
     private paymentsService: PaymentsService,
     private smsService: SmsService,
+  private vehiclesService: VehiclesService,
+  private driversService: DriversService,
   ) {}
 
   /**
@@ -196,6 +200,27 @@ export class BookingsService {
   }
 
   async assignDriver(bookingId: string, driverId: string): Promise<Booking> {
+    // Find booking and driver
+    const booking = await this.findById(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (!booking.seatsBooked) booking.seatsBooked = 1;
+
+    // Find driver's vehicle
+
+  const driver = await this.driversService.findById(driverId);
+  if (!driver || !driver.vehicle) throw new BadRequestException('Driver or vehicle not found');
+  const vehicle = await this.vehiclesService.findById(driver.vehicle.id);
+  if (!vehicle) throw new BadRequestException('Vehicle not found');
+
+    // Check seat availability
+    if (vehicle.seatsAvailable < booking.seatsBooked) {
+      throw new BadRequestException('Not enough seats available in the vehicle');
+    }
+
+    // Decrement seatsAvailable
+    await this.vehiclesService.update(vehicle.id, { seatsAvailable: vehicle.seatsAvailable - booking.seatsBooked });
+
+    // Assign driver and update booking status
     return this.updateStatus(bookingId, BookingStatus.ASSIGNED, { driverId });
   }
 

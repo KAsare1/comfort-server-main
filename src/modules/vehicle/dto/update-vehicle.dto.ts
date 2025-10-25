@@ -66,6 +66,32 @@ export class UpdateVehicleDto {
   capacity?: number;
 
   @ApiProperty({
+    description: 'Updated total number of seats',
+    example: 5,
+    minimum: 1,
+    maximum: 20,
+    required: false,
+  })
+  @IsNumber()
+  @Min(1)
+  @Max(20)
+  @IsOptional()
+  totalSeats?: number;
+
+  @ApiProperty({
+    description: 'Updated number of seats available',
+    example: 3,
+    minimum: 0,
+    maximum: 20,
+    required: false,
+  })
+  @IsNumber()
+  @Min(0)
+  @Max(20)
+  @IsOptional()
+  seatsAvailable?: number;
+
+  @ApiProperty({
     description: 'The updated status of the vehicle',
     enum: VehicleStatus,
     required: false,

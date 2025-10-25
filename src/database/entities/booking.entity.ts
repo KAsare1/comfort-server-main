@@ -63,8 +63,12 @@ export class Booking {
   })
   status: BookingStatus;
 
+
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   totalAmount: number;
+
+  @Column({ type: 'int', default: 1 })
+  seatsBooked: number;
 
   @Column({ type: 'timestamp', nullable: true })
   assignedAt: Date;

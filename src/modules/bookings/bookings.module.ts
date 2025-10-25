@@ -1,3 +1,4 @@
+import { DriversModule } from '../drivers/drivers.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from '../users/users.module';
@@ -8,6 +9,7 @@ import { BookingsController } from './booking.controller';
 import { BookingsService } from './booking.service';
 import { forwardRef } from '@nestjs/common';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { VehiclesModule } from '../vehicle/vehicle.module';
 import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
@@ -16,7 +18,9 @@ import { PaymentsModule } from '../payments/payments.module';
     UsersModule,
     PricingModule,
     LocationsModule,
-    NotificationsModule,
+  NotificationsModule,
+  VehiclesModule,
+  DriversModule,
   forwardRef(() => PaymentsModule),
   ],
   controllers: [BookingsController],
