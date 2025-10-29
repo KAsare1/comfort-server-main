@@ -1,3 +1,4 @@
+
 import {
   Controller,
   Get,
@@ -82,8 +83,13 @@ export class DriversController {
   @Put(':id/status')
   updateStatus(
     @Param('id') id: string,
-    @Body() body: { status: DriverStatus },
+    @Body() body: { status?: DriverStatus },
   ) {
+    if (!body || typeof body.status === 'undefined') {
+      throw new (require('@nestjs/common').BadRequestException)(
+        'Missing required field: status',
+      );
+    }
     return this.driversService.updateStatus(id, body.status);
   }
 
@@ -116,5 +122,15 @@ export class DriversController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.driversService.deactivate(id);
+  }
+
+  /**
+   * Delete all drivers (bulk deactivate)
+   * DELETE /drivers/all
+   */
+  @Delete('all')
+  async removeAll() {
+    await this.driversService.deactivateAll();
+    return { success: true, message: 'All drivers deactivated' };
   }
 }

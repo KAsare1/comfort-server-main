@@ -1,3 +1,5 @@
+
+// ...existing code...
 import {
   Injectable,
   NotFoundException,
@@ -321,5 +323,15 @@ export class DriversService {
 
     await this.driversRepository.update(id, { documents: updatedDocuments });
     return this.findById(id);
+  }
+
+    /**
+   * Deactivate all drivers (bulk delete)
+   */
+  async deactivateAll(): Promise<void> {
+    await this.driversRepository.update({ isActive: true }, {
+      isActive: false,
+      status: DriverStatus.OFFLINE,
+    });
   }
 }
