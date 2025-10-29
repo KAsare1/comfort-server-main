@@ -1,3 +1,4 @@
+
 import {
   Controller,
   Get,
@@ -11,10 +12,22 @@ import {
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { BookingsService } from './booking.service';
 import { BookingStatus } from 'src/shared/enums';
+import { CompleteTripDto } from './dto/complete-trip.dto';
 
 @Controller('bookings')
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
+
+  /**
+   * Endpoint for a driver to complete all or a range of trips
+   */
+  @Put('driver/:driverId/complete-trip')
+  async completeTripForDriver(
+    @Param('driverId') driverId: string,
+    @Body() body: CompleteTripDto,
+  ) {
+    return this.bookingsService.completeTripsForDriver(driverId, body);
+  }
 
   @Post()
   create(@Body() createBookingDto: CreateBookingDto) {

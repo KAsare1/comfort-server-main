@@ -12,6 +12,7 @@ import { Booking } from 'src/database/entities/booking.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { Generators } from 'src/common/utils/generator';
 import { BookingStatus, TripType, PaymentMethod, DriverStatus } from 'src/shared/enums';
+import { CompleteTripDto } from './dto/complete-trip.dto';
 import { PaymentsService } from '../payments/payments.service';
 import { SmsService } from '../notifications/sms/sms.service';
 import { VehiclesService } from '../vehicle/vehicle.service';
@@ -19,6 +20,38 @@ import { DriversService } from '../drivers/drivers.service';
 
 @Injectable()
 export class BookingsService {
+  /**
+   * Complete all or a range of trips for a driver
+   */
+  async completeTripsForDriver(driverId: string, dto: CompleteTripDto) {
+    let bookings: Booking[] = [];
+    if (dto.all === '*') {
+      bookings = await this.bookingsRepository.find({
+        where: { driverId, status: Not(BookingStatus.COMPLETED) },
+        relations: ['driver', 'driver.vehicle'],
+      });
+    } else if (dto.startDate && dto.endDate) {
+      bookings = await this.bookingsRepository.find({
+        where: {
+          driverId,
+          status: Not(BookingStatus.COMPLETED),
+          departureDate: Between(dto.startDate, dto.endDate),
+        },
+        relations: ['driver', 'driver.vehicle'],
+      });
+    } else {
+      throw new BadRequestException('Provide either all="*" or a valid date range');
+    }
+
+    const results = [];
+    for (const booking of bookings) {
+      results.push(await this.updateStatus(booking.id, BookingStatus.COMPLETED));
+    }
+    return {
+      message: `Completed ${results.length} trip(s) for driver`,
+      bookingIds: results.map(b => b.id),
+    };
+  }
   // Pricing matrix matching frontend
   private readonly pricingMatrix: Record<string, Record<string, number>> = {
     Abuakwa: {
