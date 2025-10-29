@@ -1,3 +1,4 @@
+
 import {
   Injectable,
   NotFoundException,
@@ -249,6 +250,29 @@ export class VehiclesService {
       .groupBy('vehicle.make')
       .orderBy('count', 'DESC')
       .getRawMany();
+  }
+
+    /**
+   * Reset available seats of a vehicle
+   *
+   * @param id - Vehicle ID
+   * @param seats - Number of seats to reset to (optional)
+   * @returns Updated vehicle
+   */
+  async resetSeats(id: string, seats?: number): Promise<Vehicle> {
+    const vehicle = await this.findById(id);
+    let resetSeats: number;
+    if (typeof seats === 'number' && seats > 0) {
+      resetSeats = seats;
+    } else if (vehicle.totalSeats && vehicle.totalSeats > 0) {
+      resetSeats = vehicle.totalSeats;
+    } else if (vehicle.capacity && vehicle.capacity > 0) {
+      resetSeats = vehicle.capacity;
+    } else {
+      resetSeats = 4;
+    }
+    await this.vehiclesRepository.update(id, { seatsAvailable: resetSeats });
+    return this.findById(id);
   }
 
   async getMaintenanceAlerts(): Promise<{

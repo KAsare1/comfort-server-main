@@ -17,6 +17,7 @@ import {
   ApiQuery,
 } from '@nestjs/swagger';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
+import { ResetSeatsDto } from './dto/reset-seats.dto';
 import { VehiclesService } from './vehicle.service';
 import { VehicleStatus } from 'src/shared/enums';
 import { VehicleQueryDto } from './dto/vehicle-query.dto';
@@ -173,5 +174,16 @@ export class VehiclesController {
   @ApiResponse({ status: 200, description: 'Vehicle deleted.' })
   remove(@Param('id') id: string) {
     return this.vehiclesService.delete(id);
+  }
+  @Put(':id/reset-seats')
+  @ApiOperation({ summary: 'Reset available seats of a vehicle' })
+  @ApiParam({ name: 'id', description: 'Vehicle ID' })
+  @ApiBody({ type: ResetSeatsDto })
+  @ApiResponse({ status: 200, description: 'Vehicle seats reset.' })
+  async resetSeats(
+    @Param('id') id: string,
+    @Body() body: ResetSeatsDto,
+  ) {
+    return this.vehiclesService.resetSeats(id, body.seats);
   }
 }
