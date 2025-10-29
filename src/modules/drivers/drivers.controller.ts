@@ -14,6 +14,7 @@ import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverLocationDto } from './dto/update-driver-location.dto';
 import { DriverStatus } from 'src/shared/enums';
 import { DriverQueryDto } from './dto/driver-query.dto';
+import { ApiBody } from '@nestjs/swagger';
 
 @Controller('drivers')
 export class DriversController {
@@ -81,6 +82,25 @@ export class DriversController {
   }
 
   @Put(':id/status')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        status: {
+          type: 'string',
+          enum: Object.values(DriverStatus),
+          description: 'New status for the driver',
+        },
+      },
+      required: ['status'],
+    },
+    description: 'Status update payload',
+    examples: {
+      available: { value: { status: 'AVAILABLE' } },
+      busy: { value: { status: 'BUSY' } },
+      offline: { value: { status: 'OFFLINE' } },
+    },
+  })
   updateStatus(
     @Param('id') id: string,
     @Body() body: { status?: DriverStatus },
