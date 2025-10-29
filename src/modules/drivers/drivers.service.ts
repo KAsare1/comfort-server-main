@@ -134,10 +134,8 @@ export class DriversService {
       throw new BadRequestException('Driver is not available');
     }
 
-    // Update driver status to busy
-    await this.updateStatus(driverId, DriverStatus.BUSY);
-
-    return this.findById(driverId);
+    // Do not update status here; status is managed by booking logic based on vehicle fullness
+    return driver;
   }
 
   async completeTrip(driverId: string): Promise<Driver> {
