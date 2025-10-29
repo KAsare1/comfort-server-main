@@ -247,21 +247,25 @@ export class BookingsService {
         const completedBooking = await this.findById(id);
         if (completedBooking && completedBooking.driver && completedBooking.driver.vehicle) {
           const vehicleId = completedBooking.driver.vehicle.id;
+          const driverId = completedBooking.driver.id;
           // Find all active (not completed/cancelled) bookings for this vehicle
           const activeBookings = await this.bookingsRepository.count({
             where: {
-              driverId: completedBooking.driver.id,
+              driverId,
               status: Not(BookingStatus.COMPLETED),
             },
           });
-          if (activeBookings === 0) {
-            // Reset seatsAvailable to totalSeats
-            const vehicle = await this.vehiclesService.findById(vehicleId);
-            if (vehicle) {
+          const vehicle = await this.vehiclesService.findById(vehicleId);
+          if (vehicle) {
+            if (vehicle.seatsAvailable === 0 && activeBookings === 0) {
+              // Only reset seats and set driver available if vehicle was full and all bookings are now completed
               await this.vehiclesService.update(vehicleId, { seatsAvailable: vehicle.totalSeats });
+              await this.driversService.updateStatus(driverId, DriverStatus.AVAILABLE);
+            } else if (vehicle.seatsAvailable > 0 && activeBookings === 0) {
+              // If seats are already available and all bookings are completed, just set driver to available
+              await this.driversService.updateStatus(driverId, DriverStatus.AVAILABLE);
             }
-            // Set driver status to AVAILABLE
-            await this.driversService.updateStatus(completedBooking.driver.id, DriverStatus.AVAILABLE);
+            // If there are still active bookings, do nothing
           }
         }
         break;
