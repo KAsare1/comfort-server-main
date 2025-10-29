@@ -46,18 +46,25 @@ export class BookingsService {
     const results = [];
     let vehicleId: string | undefined;
     let vehicleTotalSeats: number | undefined;
+    let vehicleCapacity: number | undefined;
     for (const booking of bookings) {
       results.push(await this.updateStatus(booking.id, BookingStatus.COMPLETED));
       // Capture vehicle info from the first booking (all should be same vehicle for a driver)
       if (!vehicleId && booking.driver && booking.driver.vehicle) {
         vehicleId = booking.driver.vehicle.id;
         vehicleTotalSeats = booking.driver.vehicle.totalSeats;
+        vehicleCapacity = booking.driver.vehicle.capacity;
       }
     }
 
     // After all bookings are completed, reset seats and set driver available
-    if (vehicleId && vehicleTotalSeats) {
-      await this.vehiclesService.update(vehicleId, { seatsAvailable: vehicleTotalSeats });
+    if (vehicleId) {
+      // Fetch latest vehicle to ensure up-to-date values
+      const vehicle = await this.vehiclesService.findById(vehicleId);
+      const resetSeats = (vehicleTotalSeats && vehicleTotalSeats > 0)
+        ? vehicleTotalSeats
+        : (vehicle && vehicle.capacity ? vehicle.capacity : 4);
+      await this.vehiclesService.update(vehicleId, { seatsAvailable: resetSeats });
       await this.driversService.updateStatus(driverId, DriverStatus.AVAILABLE);
     }
 
