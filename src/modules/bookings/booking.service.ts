@@ -6,12 +6,12 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, Not } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { Booking } from 'src/database/entities/booking.entity';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { Generators } from 'src/common/utils/generator';
-import { BookingStatus, TripType, PaymentMethod } from 'src/shared/enums';
+import { BookingStatus, TripType, PaymentMethod, DriverStatus } from 'src/shared/enums';
 import { PaymentsService } from '../payments/payments.service';
 import { SmsService } from '../notifications/sms/sms.service';
 import { VehiclesService } from '../vehicle/vehicle.service';
@@ -210,6 +210,27 @@ export class BookingsService {
         break;
       case BookingStatus.COMPLETED:
         updateData.completedAt = new Date();
+        // After marking as completed, check if all bookings for the vehicle are completed
+        const completedBooking = await this.findById(id);
+        if (completedBooking && completedBooking.driver && completedBooking.driver.vehicle) {
+          const vehicleId = completedBooking.driver.vehicle.id;
+          // Find all active (not completed/cancelled) bookings for this vehicle
+          const activeBookings = await this.bookingsRepository.count({
+            where: {
+              driverId: completedBooking.driver.id,
+              status: Not(BookingStatus.COMPLETED),
+            },
+          });
+          if (activeBookings === 0) {
+            // Reset seatsAvailable to totalSeats
+            const vehicle = await this.vehiclesService.findById(vehicleId);
+            if (vehicle) {
+              await this.vehiclesService.update(vehicleId, { seatsAvailable: vehicle.totalSeats });
+            }
+            // Set driver status to AVAILABLE
+            await this.driversService.updateStatus(completedBooking.driver.id, DriverStatus.AVAILABLE);
+          }
+        }
         break;
     }
 
@@ -224,7 +245,6 @@ export class BookingsService {
     if (!booking.seatsBooked) booking.seatsBooked = 1;
 
     // Find driver's vehicle
-
     const driver = await this.driversService.findById(driverId);
     if (!driver || !driver.vehicle)
       throw new BadRequestException('Driver or vehicle not found');
@@ -239,9 +259,15 @@ export class BookingsService {
     }
 
     // Decrement seatsAvailable
+    const newSeatsAvailable = vehicle.seatsAvailable - booking.seatsBooked;
     await this.vehiclesService.update(vehicle.id, {
-      seatsAvailable: vehicle.seatsAvailable - booking.seatsBooked,
+      seatsAvailable: newSeatsAvailable,
     });
+
+    // If vehicle is now full, set driver status to BUSY
+    if (newSeatsAvailable === 0) {
+      await this.driversService.updateStatus(driverId, DriverStatus.BUSY);
+    }
 
     // Assign driver and update booking status
     const updatedBooking = await this.updateStatus(bookingId, BookingStatus.ASSIGNED, { driverId });
