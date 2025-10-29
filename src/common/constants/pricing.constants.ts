@@ -11,9 +11,5 @@ export const PRICING_CONSTANTS = {
     { start: '07:00', end: '09:00' }, // Morning rush
     { start: '17:00', end: '19:00' }, // Evening rush
   ],
-  SERVICE_AREAS: [
-    'Greater Accra',
-    'Tema',
-    'Kasoa',
-  ],
+  SERVICE_AREAS: ['Greater Accra', 'Tema', 'Kasoa'],
 };

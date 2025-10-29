@@ -1,5 +1,12 @@
 // src/database/entities/user.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+} from 'typeorm';
 import { Booking } from './booking.entity';
 import { UserRole } from 'src/shared/enums';
 
@@ -17,10 +24,10 @@ export class User {
   @Column({ type: 'varchar', length: 100, nullable: true })
   email: string;
 
-  @Column({ 
-    type: 'enum', 
-    enum: UserRole, 
-    default: UserRole.CUSTOMER 
+  @Column({
+    type: 'enum',
+    enum: UserRole,
+    default: UserRole.CUSTOMER,
   })
   role: UserRole;
 
@@ -42,5 +49,3 @@ export class User {
   @UpdateDateColumn()
   updatedAt: Date;
 }
-
-

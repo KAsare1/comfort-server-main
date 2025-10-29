@@ -1,4 +1,12 @@
-import { IsString, IsPhoneNumber, IsEmail, IsOptional, IsDateString, IsEnum, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsPhoneNumber,
+  IsEmail,
+  IsOptional,
+  IsDateString,
+  IsEnum,
+  IsBoolean,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { DriverStatus } from 'src/shared/enums';
 

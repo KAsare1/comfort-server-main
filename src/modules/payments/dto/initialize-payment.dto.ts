@@ -12,7 +12,7 @@ export class InitializePaymentDto {
 
   @ApiProperty({
     description: 'The payment amount',
-    example: 150.50,
+    example: 150.5,
     minimum: 0.01,
   })
   @IsNumber()

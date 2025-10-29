@@ -1,7 +1,10 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
-import { PaystackInitializeResponse, PaystackVerifyResponse } from './paystack.interface';
+import {
+  PaystackInitializeResponse,
+  PaystackVerifyResponse,
+} from './paystack.interface';
 import { getPaystackConfig } from 'src/config/paystack.config';
 
 @Injectable()
@@ -11,7 +14,7 @@ export class PaystackService {
 
   constructor(private configService: ConfigService) {
     this.config = getPaystackConfig(this.configService);
-    
+
     this.httpClient = axios.create({
       baseURL: this.config.baseUrl,
       headers: {
@@ -48,7 +51,9 @@ export class PaystackService {
 
   async verifyPayment(reference: string): Promise<PaystackVerifyResponse> {
     try {
-      const response = await this.httpClient.get(`/transaction/verify/${reference}`);
+      const response = await this.httpClient.get(
+        `/transaction/verify/${reference}`,
+      );
       return response.data;
     } catch (error) {
       throw new HttpException(

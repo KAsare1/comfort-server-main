@@ -62,10 +62,7 @@ export class PaymentsController {
   }
 
   @Post(':id/refund')
-  refundPayment(
-    @Param('id') id: string,
-    @Body() body: { reason?: string },
-  ) {
+  refundPayment(@Param('id') id: string, @Body() body: { reason?: string }) {
     return this.paymentsService.refundPayment(id, body.reason);
   }
 }

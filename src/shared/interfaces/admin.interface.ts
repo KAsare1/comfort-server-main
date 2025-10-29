@@ -23,4 +23,3 @@ export interface RevenueTrend {
   revenue: number;
   bookings: number;
 }
-

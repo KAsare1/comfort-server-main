@@ -1,5 +1,12 @@
 // src/database/entities/vehicle.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToOne,
+} from 'typeorm';
 import { Driver } from './driver.entity';
 import { VehicleStatus } from 'src/shared/enums';
 
@@ -32,10 +39,10 @@ export class Vehicle {
   @Column({ type: 'int', default: 4 })
   seatsAvailable: number;
 
-  @Column({ 
-    type: 'enum', 
-    enum: VehicleStatus, 
-    default: VehicleStatus.ACTIVE 
+  @Column({
+    type: 'enum',
+    enum: VehicleStatus,
+    default: VehicleStatus.ACTIVE,
   })
   status: VehicleStatus;
 
@@ -51,7 +58,7 @@ export class Vehicle {
   @Column({ type: 'jsonb', nullable: true })
   features: string[]; // AC, GPS, etc.
 
-  @OneToOne(() => Driver, driver => driver.vehicle)
+  @OneToOne(() => Driver, (driver) => driver.vehicle)
   driver: Driver;
 
   @CreateDateColumn()

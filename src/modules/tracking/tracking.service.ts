@@ -1,61 +1,46 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { DriversService } from '../drivers/drivers.service';
-import { UpdateLocationDto } from './dto/update-location.dto';
-import { GetTrackingDto } from './dto/get-tracking.dto';
-import { TrackingData } from 'src/database/entities/tracking.entity';
-import { BookingsService } from '../bookings/booking.service';
-import { BookingStatus } from 'src/shared/enums';
-
+import { DriverLocation } from 'src/database/entities/driver-location.entity';
+import { UpdateDriverLocationDto } from '../drivers/dto/update-driver-location.dto';
 
 @Injectable()
 export class TrackingService {
   constructor(
-    @InjectRepository(TrackingData)
-    private trackingRepository: Repository<TrackingData>,
-    private bookingsService: BookingsService,
+    @InjectRepository(DriverLocation)
+    private driverLocationRepository: Repository<DriverLocation>,
     private driversService: DriversService,
   ) {}
 
-  async updateDriverLocation(updateDto: UpdateLocationDto): Promise<TrackingData> {
-    const { bookingId, driverId, latitude, longitude, speed, heading, accuracy } = updateDto;
-
-    // Verify booking exists and is active
-    const booking = await this.bookingsService.findById(bookingId);
-    if (!booking) {
-      throw new NotFoundException('Booking not found');
-    }
-
-    // Verify driver is assigned to this booking
-    if (booking.driverId !== driverId) {
-      throw new BadRequestException('Driver not assigned to this booking');
-    }
-
-    // Verify booking is in a trackable state
-    const trackableStatuses = [
-      BookingStatus.ASSIGNED,
-      BookingStatus.EN_ROUTE,
-      BookingStatus.ARRIVED,
-      BookingStatus.IN_PROGRESS,
-    ];
-
-    if (!trackableStatuses.includes(booking.status)) {
-      throw new BadRequestException('Booking is not in a trackable state');
-    }
-
-    // Update driver's current location
-    await this.driversService.updateLocation(driverId, {
+  /**
+   * Update driver's current location
+   * No booking required - just track the driver
+   */
+  async updateDriverLocation(
+    updateDto: UpdateDriverLocationDto,
+  ): Promise<DriverLocation> {
+    const {
+      driverId,
       latitude,
       longitude,
       speed,
       heading,
       accuracy,
-    });
+    } = updateDto;
 
-    // Create tracking record
-    const trackingData = this.trackingRepository.create({
-      bookingId,
+    // Verify driver exists
+    const driver = await this.driversService.findById(driverId);
+    if (!driver) {
+      throw new NotFoundException('Driver not found');
+    }
+
+    // Create location record
+    const locationData = this.driverLocationRepository.create({
       driverId,
       latitude,
       longitude,
@@ -65,177 +50,324 @@ export class TrackingService {
       timestamp: new Date(),
     });
 
-    return this.trackingRepository.save(trackingData);
+    return this.driverLocationRepository.save(locationData);
   }
 
-  async getBookingTracking(getTrackingDto: GetTrackingDto): Promise<TrackingData[]> {
-    const { bookingId, startTime, endTime } = getTrackingDto;
+  /**
+   * Get driver's latest location
+   */
+  async getDriverLatestLocation(driverId: string): Promise<DriverLocation | null> {
+    // Don't verify driver exists here - just check if location exists
+    // This avoids unnecessary DB calls
 
-    const query = this.trackingRepository.createQueryBuilder('tracking')
-      .where('tracking.bookingId = :bookingId', { bookingId })
-      .orderBy('tracking.timestamp', 'ASC');
+    const location = await this.driverLocationRepository
+      .createQueryBuilder('location')
+      .where('location.driverId = :driverId', { driverId })
+      .orderBy('location.timestamp', 'DESC')
+      .limit(1)
+      .getOne();
 
-    if (startTime) {
-      query.andWhere('tracking.timestamp >= :startTime', { startTime: new Date(startTime) });
+    return location;
+  }
+
+  /**
+   * Get driver's current location with driver details
+   */
+  async getDriverTrackingInfo(driverId: string): Promise<{
+    driver: any;
+    location: DriverLocation | null;
+  }> {
+    const driver = await this.driversService.findById(driverId);
+    if (!driver) {
+      throw new NotFoundException('Driver not found');
     }
 
-    if (endTime) {
-      query.andWhere('tracking.timestamp <= :endTime', { endTime: new Date(endTime) });
+    const location = await this.getDriverLatestLocation(driverId);
+
+    return {
+      driver: {
+        id: driver.id,
+        name: driver.name,
+        phone: driver.phone,
+        vehicle: driver.vehicle,
+        status: driver.status,
+      },
+      location,
+    };
+  }
+
+  /**
+   * Get driver's location history
+   */
+  async getDriverLocationHistory(
+    driverId: string,
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<DriverLocation[]> {
+    const query = this.driverLocationRepository
+      .createQueryBuilder('location')
+      .where('location.driverId = :driverId', { driverId })
+      .orderBy('location.timestamp', 'ASC');
+
+    if (startDate) {
+      query.andWhere('location.timestamp >= :startDate', { startDate });
+    }
+
+    if (endDate) {
+      query.andWhere('location.timestamp <= :endDate', { endDate });
     }
 
     return query.getMany();
   }
 
-  async getLatestDriverLocation(driverId: string, bookingId?: string): Promise<TrackingData | null> {
-    const query = this.trackingRepository.createQueryBuilder('tracking')
-      .where('tracking.driverId = :driverId', { driverId })
-      .orderBy('tracking.timestamp', 'DESC')
-      .limit(1);
+  /**
+   * Get all drivers with recent locations (last 5 minutes)
+   * Alternative to findActiveDrivers that works with your existing driver service
+   */
+  async getAllActiveDriversLocations(): Promise<Array<{
+    driver: any;
+    location: DriverLocation | null;
+  }>> {
+    // Get all locations from the last 5 minutes
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    
+    const recentLocations = await this.driverLocationRepository
+      .createQueryBuilder('location')
+      .where('location.timestamp >= :cutoff', { cutoff: fiveMinutesAgo })
+      .distinctOn(['location.driverId'])
+      .orderBy('location.driverId')
+      .addOrderBy('location.timestamp', 'DESC')
+      .getMany();
 
-    if (bookingId) {
-      query.andWhere('tracking.bookingId = :bookingId', { bookingId });
-    }
+    // Get driver details for each
+    const driversWithLocations = await Promise.all(
+      recentLocations.map(async (location) => {
+        try {
+          const driver = await this.driversService.findById(location.driverId);
+          return {
+            driver: {
+              id: driver.id,
+              name: driver.name,
+              phone: driver.phone,
+              vehicle: driver.vehicle,
+              status: driver.status,
+            },
+            location,
+          };
+        } catch (error) {
+          // Skip if driver not found
+          return null;
+        }
+      })
+    );
 
-    return query.getOne();
+    // Filter out null values (drivers that weren't found)
+    return driversWithLocations.filter(item => item !== null);
   }
 
-async getActiveBookingLocation(bookingReference: string): Promise<{
-  booking: any;
-  latestLocation: TrackingData | null;
-  route: any;
-}> {
-  // Use findByReference instead of findById
-  const booking = await this.bookingsService.findByReference(bookingReference);
-  
-  if (!booking.driver) {
-    throw new BadRequestException('No driver assigned to booking');
-  }
-
-  const latestLocation = await this.getLatestDriverLocation(booking.driverId, booking.id);
-
-  return {
-    booking: {
-      id: booking.id,
-      reference: booking.reference,
-      status: booking.status,
-      pickupLocation: booking.pickupLocation,
-      dropoffLocation: booking.dropoffLocation,
-      // pickupLatitude: booking.pickupLatitude,
-      // pickupLongitude: booking.pickupLongitude,
-      // dropoffLatitude: booking.dropoffLatitude,
-      // dropoffLongitude: booking.dropoffLongitude,
-      driver: {
-        id: booking.driver.id,
-        name: booking.driver.name,
-        phone: booking.driver.phone,
-        vehicle: booking.driver.vehicle,
-      },
-    },
-    latestLocation,
-    route: booking.dropoffLocation,
-  };
-}
-
-  async getDriverTrackingHistory(
+  /**
+   * Calculate distance traveled by driver in a time period
+   */
+  async calculateDriverDistance(
     driverId: string,
     startDate: Date,
     endDate: Date,
-  ): Promise<TrackingData[]> {
-    return this.trackingRepository.find({
-      where: {
-        driverId,
-        timestamp: Between(startDate, endDate),
-      },
-      order: { timestamp: 'ASC' },
-      relations: ['booking'],
-    });
-  }
+  ): Promise<number> {
+    const locations = await this.getDriverLocationHistory(
+      driverId,
+      startDate,
+      endDate,
+    );
 
-  async calculateDistance(trackingData: TrackingData[]): Promise<number> {
-    if (trackingData.length < 2) return 0;
+    if (locations.length < 2) return 0;
 
     let totalDistance = 0;
-    for (let i = 1; i < trackingData.length; i++) {
-      const prev = trackingData[i - 1];
-      const current = trackingData[i];
-      
-      // Calculate distance between consecutive points
+    for (let i = 1; i < locations.length; i++) {
+      const prev = locations[i - 1];
+      const current = locations[i];
+
       const distance = this.haversineDistance(
         prev.latitude,
         prev.longitude,
         current.latitude,
         current.longitude,
       );
-      
+
       totalDistance += distance;
     }
 
     return totalDistance;
   }
 
-  private haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Earth's radius in kilometers
-    const dLat = this.deg2rad(lat2 - lat1);
-    const dLon = this.deg2rad(lon2 - lon1);
-    
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.deg2rad(lat1)) * Math.cos(this.deg2rad(lat2)) *
-      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-    
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
+  /**
+   * Get driver's trip summary for a time period
+   */
+  async getDriverTripSummary(
+    driverId: string,
+    startDate: Date,
+    endDate: Date,
+  ) {
+    const locations = await this.getDriverLocationHistory(
+      driverId,
+      startDate,
+      endDate,
+    );
 
-  private deg2rad(deg: number): number {
-    return deg * (Math.PI / 180);
-  }
-
-  async getTripSummary(bookingId: string) {
-    const tracking = await this.getBookingTracking({ bookingId });
-    
-    if (tracking.length === 0) {
+    if (locations.length === 0) {
       return {
-        bookingId,
+        driverId,
         totalDistance: 0,
         duration: 0,
         averageSpeed: 0,
         maxSpeed: 0,
         startTime: null,
         endTime: null,
+        totalPoints: 0,
       };
     }
 
-    const totalDistance = await this.calculateDistance(tracking);
-    const startTime = tracking[0].timestamp;
-    const endTime = tracking[tracking.length - 1].timestamp;
-    const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60); // minutes
+    const totalDistance = await this.calculateDriverDistance(
+      driverId,
+      startDate,
+      endDate,
+    );
+    const startTime = locations[0].timestamp;
+    const endTime = locations[locations.length - 1].timestamp;
+    const duration = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
 
-    const speeds = tracking.filter(t => t.speed && t.speed > 0).map(t => t.speed);
-    const averageSpeed = speeds.length > 0 ? speeds.reduce((a, b) => a + b, 0) / speeds.length : 0;
+    const speeds = locations
+      .map((l) => l.speed)
+      .filter((speed): speed is number => typeof speed === 'number' && speed > 0);
+    const averageSpeed =
+      speeds.length > 0 ? speeds.reduce((a, b) => a + b, 0) / speeds.length : 0;
     const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 0;
 
     return {
-      bookingId,
+      driverId,
       totalDistance: Math.round(totalDistance * 100) / 100,
       duration: Math.round(duration * 100) / 100,
       averageSpeed: Math.round(averageSpeed * 100) / 100,
       maxSpeed: Math.round(maxSpeed * 100) / 100,
       startTime,
       endTime,
-      totalPoints: tracking.length,
+      totalPoints: locations.length,
     };
   }
 
-  async cleanupOldTracking(daysToKeep: number = 30): Promise<number> {
+  /**
+   * Check if driver is currently moving
+   */
+  async isDriverMoving(driverId: string): Promise<boolean> {
+    const location = await this.getDriverLatestLocation(driverId);
+    
+    if (!location) return false;
+    
+    // Check if location is recent (within last 5 minutes)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    if (location.timestamp < fiveMinutesAgo) return false;
+    
+    // Consider moving if speed > 5 km/h
+    return location.speed !== null && location.speed > 5;
+  }
+
+  /**
+   * Get drivers near a location
+   * This queries all recent locations and filters by distance
+   */
+  async getNearbyDrivers(
+    latitude: number,
+    longitude: number,
+    radiusKm: number = 5,
+  ): Promise<Array<{
+    driver: any;
+    location: DriverLocation;
+    distance: number;
+  }>> {
+    // Get all recent locations (last 5 minutes)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    
+    const recentLocations = await this.driverLocationRepository
+      .createQueryBuilder('location')
+      .where('location.timestamp >= :cutoff', { cutoff: fiveMinutesAgo })
+      .distinctOn(['location.driverId'])
+      .orderBy('location.driverId')
+      .addOrderBy('location.timestamp', 'DESC')
+      .getMany();
+
+    const nearbyDrivers = [];
+
+    for (const location of recentLocations) {
+      const distance = this.haversineDistance(
+        latitude,
+        longitude,
+        location.latitude,
+        location.longitude,
+      );
+
+      if (distance <= radiusKm) {
+        try {
+          const driver = await this.driversService.findById(location.driverId);
+          nearbyDrivers.push({
+            driver: {
+              id: driver.id,
+              name: driver.name,
+              phone: driver.phone,
+              vehicle: driver.vehicle,
+              status: driver.status,
+            },
+            location,
+            distance: Math.round(distance * 100) / 100,
+          });
+        } catch (error) {
+          // Skip if driver not found
+          continue;
+        }
+      }
+    }
+
+    // Sort by distance
+    return nearbyDrivers.sort((a, b) => a.distance - b.distance);
+  }
+
+  /**
+   * Cleanup old location data
+   */
+  async cleanupOldLocations(daysToKeep: number = 30): Promise<number> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
 
-    const result = await this.trackingRepository
+    const result = await this.driverLocationRepository
       .createQueryBuilder()
       .delete()
       .where('timestamp < :cutoffDate', { cutoffDate })
       .execute();
 
     return result.affected || 0;
+  }
+
+  // Helper: Calculate distance between two coordinates
+  private haversineDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = this.deg2rad(lat2 - lat1);
+    const dLon = this.deg2rad(lon2 - lon1);
+
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(this.deg2rad(lat1)) *
+        Math.cos(this.deg2rad(lat2)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  private deg2rad(deg: number): number {
+    return deg * (Math.PI / 180);
   }
 }

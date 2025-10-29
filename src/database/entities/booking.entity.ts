@@ -1,5 +1,15 @@
 // src/database/entities/booking.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany, OneToOne } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
 import { Payment } from './payment.entity';
 import { TrackingData } from './tracking.entity';
 import { User } from './user.entity';
@@ -14,14 +24,14 @@ export class Booking {
   @Column({ type: 'varchar', length: 20, unique: true })
   reference: string;
 
-  @ManyToOne(() => User, user => user.bookings)
+  @ManyToOne(() => User, (user) => user.bookings)
   @JoinColumn({ name: 'customer_id' })
   customer: User;
 
   @Column({ name: 'customer_id' })
   customerId: string;
 
-  @ManyToOne(() => Driver, driver => driver.bookings, { nullable: true })
+  @ManyToOne(() => Driver, (driver) => driver.bookings, { nullable: true })
   @JoinColumn({ name: 'driver_id' })
   driver: Driver;
 
@@ -59,10 +69,9 @@ export class Booking {
   @Column({
     type: 'enum',
     enum: BookingStatus,
-    default: BookingStatus.PENDING
+    default: BookingStatus.PENDING,
   })
   status: BookingStatus;
-
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   totalAmount: number;
@@ -82,10 +91,10 @@ export class Booking {
   @Column({ type: 'text', nullable: true })
   notes: string;
 
-  @OneToOne(() => Payment, payment => payment.booking)
+  @OneToOne(() => Payment, (payment) => payment.booking)
   payment: Payment;
 
-  @OneToMany(() => TrackingData, tracking => tracking.booking)
+  @OneToMany(() => TrackingData, (tracking) => tracking.booking)
   trackingData: TrackingData[];
 
   @CreateDateColumn()

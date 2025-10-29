@@ -6,7 +6,9 @@ export interface PaystackConfig {
   baseUrl: string;
 }
 
-export const getPaystackConfig = (configService: ConfigService): PaystackConfig => {
+export const getPaystackConfig = (
+  configService: ConfigService,
+): PaystackConfig => {
   const secretKey = configService.get<string>('PAYSTACK_SECRET_KEY');
   const publicKey = configService.get<string>('PAYSTACK_PUBLIC_KEY');
 

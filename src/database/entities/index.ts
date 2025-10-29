@@ -1,4 +1,3 @@
-
 import { Driver } from './driver.entity';
 import { Vehicle } from './vehicle.entity';
 import { Booking } from './booking.entity';

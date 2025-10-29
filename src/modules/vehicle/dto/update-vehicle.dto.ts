@@ -1,4 +1,13 @@
-import { IsString, IsNumber, IsEnum, IsOptional, IsArray, IsDateString, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsEnum,
+  IsOptional,
+  IsArray,
+  IsDateString,
+  Min,
+  Max,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { VehicleStatus } from 'src/shared/enums';
 

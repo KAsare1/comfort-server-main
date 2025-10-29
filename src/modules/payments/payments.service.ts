@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PaystackService } from './paystack/paystack.service';
@@ -8,7 +12,6 @@ import { Payment } from 'src/database/entities/payment.entity';
 import { BookingsService } from '../bookings/booking.service';
 import { BookingStatus, PaymentStatus } from 'src/shared/enums';
 import { Generators } from 'src/common/utils/generator';
-
 
 @Injectable()
 export class PaymentsService {
@@ -20,8 +23,10 @@ export class PaymentsService {
   ) {}
 
   async initializePayment(initializeDto: InitializePaymentDto) {
-    const booking = await this.bookingsService.findById(initializeDto.bookingId);
-    
+    const booking = await this.bookingsService.findById(
+      initializeDto.bookingId,
+    );
+
     if (booking.status !== BookingStatus.PENDING) {
       throw new BadRequestException('Can only pay for pending bookings');
     }
@@ -32,14 +37,18 @@ export class PaymentsService {
     });
 
     if (existingPayment && existingPayment.status === PaymentStatus.COMPLETED) {
-      throw new BadRequestException('Payment already completed for this booking');
+      throw new BadRequestException(
+        'Payment already completed for this booking',
+      );
     }
 
     const reference = Generators.generatePaymentReference();
-    
+
     // Initialize payment with Paystack
     const paystackResponse = await this.paystackService.initializePayment(
-      initializeDto.customerEmail || booking.customer.email || `${booking.customer.phone}@comfort.com`,
+      initializeDto.customerEmail ||
+        booking.customer.email ||
+        `${booking.customer.phone}@comfort.com`,
       initializeDto.amount,
       reference,
       initializeDto.callbackUrl,
@@ -96,7 +105,9 @@ export class PaymentsService {
     }
 
     // Verify with Paystack
-    const paystackResponse = await this.paystackService.verifyPayment(payment.paystackReference);
+    const paystackResponse = await this.paystackService.verifyPayment(
+      payment.paystackReference,
+    );
     if (paystackResponse.data.status === 'success') {
       // Update payment status
       await this.paymentsRepository.update(payment.id, {
@@ -106,7 +117,10 @@ export class PaymentsService {
       });
 
       // Update booking status
-      await this.bookingsService.updateStatus(payment.bookingId, BookingStatus.CONFIRMED);
+      await this.bookingsService.updateStatus(
+        payment.bookingId,
+        BookingStatus.CONFIRMED,
+      );
 
       return await this.findById(payment.id);
     } else {
@@ -117,7 +131,9 @@ export class PaymentsService {
         paystackResponse: paystackResponse.data as any,
       });
 
-      throw new BadRequestException(`Payment failed: ${paystackResponse.data.gateway_response}`);
+      throw new BadRequestException(
+        `Payment failed: ${paystackResponse.data.gateway_response}`,
+      );
     }
   }
 
@@ -161,7 +177,8 @@ export class PaymentsService {
     startDate?: Date,
     endDate?: Date,
   ) {
-    const query = this.paymentsRepository.createQueryBuilder('payment')
+    const query = this.paymentsRepository
+      .createQueryBuilder('payment')
       .leftJoinAndSelect('payment.booking', 'booking')
       .leftJoinAndSelect('booking.customer', 'customer');
 
@@ -201,17 +218,17 @@ export class PaymentsService {
 
   async getPaymentStats(startDate?: Date, endDate?: Date) {
     const query = this.paymentsRepository.createQueryBuilder('payment');
-    
+
     if (startDate) {
       query.andWhere('payment.createdAt >= :startDate', { startDate });
     }
-    
+
     if (endDate) {
       query.andWhere('payment.createdAt <= :endDate', { endDate });
     }
 
     const totalPayments = await query.getCount();
-    
+
     const statusCounts = await query
       .select('payment.status, COUNT(payment.id) as count')
       .groupBy('payment.status')
@@ -237,14 +254,14 @@ export class PaymentsService {
 
   async refundPayment(paymentId: string, reason?: string) {
     const payment = await this.findById(paymentId);
-    
+
     if (payment.status !== PaymentStatus.COMPLETED) {
       throw new BadRequestException('Can only refund completed payments');
     }
 
     // Process refund with Paystack
     const refundResponse = await this.paystackService.refundTransaction(
-      payment.paystackResponse.id.toString()
+      payment.paystackResponse.id.toString(),
     );
 
     if (refundResponse.status) {
@@ -255,7 +272,10 @@ export class PaymentsService {
       });
 
       // Update booking status
-      await this.bookingsService.updateStatus(payment.bookingId, BookingStatus.CANCELLED);
+      await this.bookingsService.updateStatus(
+        payment.bookingId,
+        BookingStatus.CANCELLED,
+      );
 
       return await this.findById(paymentId);
     } else {

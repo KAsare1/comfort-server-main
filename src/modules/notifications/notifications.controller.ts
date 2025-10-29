@@ -1,6 +1,9 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
-import { SendNotificationDto, NotificationType } from './dto/send-notification.dto';
+import {
+  SendNotificationDto,
+  NotificationType,
+} from './dto/send-notification.dto';
 
 @Controller('notifications')
 export class NotificationsController {
@@ -12,12 +15,15 @@ export class NotificationsController {
   }
 
   @Post('bulk')
-  sendBulkNotification(@Body() body: {
-    recipients: string[];
-    type: NotificationType;
-    message: string;
-    subject?: string;
-  }) {
+  sendBulkNotification(
+    @Body()
+    body: {
+      recipients: string[];
+      type: NotificationType;
+      message: string;
+      subject?: string;
+    },
+  ) {
     return this.notificationsService.sendBulkNotification(
       body.recipients,
       body.type,
@@ -27,11 +33,14 @@ export class NotificationsController {
   }
 
   @Post('booking-confirmation')
-  sendBookingConfirmation(@Body() body: {
-    customerPhone: string;
-    customerEmail: string;
-    bookingDetails: any;
-  }) {
+  sendBookingConfirmation(
+    @Body()
+    body: {
+      customerPhone: string;
+      customerEmail: string;
+      bookingDetails: any;
+    },
+  ) {
     return this.notificationsService.sendBookingConfirmation(
       body.customerPhone,
       body.customerEmail,
@@ -40,13 +49,16 @@ export class NotificationsController {
   }
 
   @Post('driver-assigned')
-  sendDriverAssigned(@Body() body: {
-    customerPhone: string;
-    bookingRef: string;
-    driverName: string;
-    vehiclePlate: string;
-    eta: string;
-  }) {
+  sendDriverAssigned(
+    @Body()
+    body: {
+      customerPhone: string;
+      bookingRef: string;
+      driverName: string;
+      vehiclePlate: string;
+      eta: string;
+    },
+  ) {
     return this.notificationsService.sendDriverAssigned(
       body.customerPhone,
       body.bookingRef,
@@ -57,11 +69,14 @@ export class NotificationsController {
   }
 
   @Post('driver-arrived')
-  sendDriverArrived(@Body() body: {
-    customerPhone: string;
-    bookingRef: string;
-    driverName: string;
-  }) {
+  sendDriverArrived(
+    @Body()
+    body: {
+      customerPhone: string;
+      bookingRef: string;
+      driverName: string;
+    },
+  ) {
     return this.notificationsService.sendDriverArrived(
       body.customerPhone,
       body.bookingRef,
@@ -70,11 +85,9 @@ export class NotificationsController {
   }
 
   @Post('trip-completed')
-  sendTripCompleted(@Body() body: {
-    customerPhone: string;
-    bookingRef: string;
-    amount: number;
-  }) {
+  sendTripCompleted(
+    @Body() body: { customerPhone: string; bookingRef: string; amount: number },
+  ) {
     return this.notificationsService.sendTripCompleted(
       body.customerPhone,
       body.bookingRef,

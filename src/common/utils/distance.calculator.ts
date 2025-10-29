@@ -16,17 +16,17 @@ export class DistanceCalculator {
     const R = 6371; // Earth's radius in kilometers
     const dLat = this.deg2rad(lat2 - lat1);
     const dLon = this.deg2rad(lon2 - lon1);
-    
+
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(this.deg2rad(lat1)) *
         Math.cos(this.deg2rad(lat2)) *
         Math.sin(dLon / 2) *
         Math.sin(dLon / 2);
-    
+
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c;
-    
+
     return Math.round(distance * 100) / 100; // Round to 2 decimal places
   }
 
@@ -45,11 +45,15 @@ export class DistanceCalculator {
   static findNearestDrivers(
     targetLat: number,
     targetLon: number,
-    drivers: Array<{ id: string; currentLatitude: number; currentLongitude: number }>,
+    drivers: Array<{
+      id: string;
+      currentLatitude: number;
+      currentLongitude: number;
+    }>,
     radiusKm: number = 10,
   ) {
     return drivers
-      .map(driver => ({
+      .map((driver) => ({
         ...driver,
         distance: this.haversineDistance(
           targetLat,
@@ -58,7 +62,7 @@ export class DistanceCalculator {
           driver.currentLongitude,
         ),
       }))
-      .filter(driver => driver.distance <= radiusKm)
+      .filter((driver) => driver.distance <= radiusKm)
       .sort((a, b) => a.distance - b.distance);
   }
 }

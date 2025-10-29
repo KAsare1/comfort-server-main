@@ -22,9 +22,11 @@ export class ArkeselService {
 
   constructor(private configService: ConfigService) {
     this.config = getArkeselConfig(this.configService);
-    
+
     if (!this.config.apiKey) {
-      console.warn('Arkesel API key not configured. SMS service will not work.');
+      console.warn(
+        'Arkesel API key not configured. SMS service will not work.',
+      );
     }
 
     this.httpClient = axios.create({
@@ -44,17 +46,23 @@ export class ArkeselService {
    */
   async sendSms(to: string, message: string, sender?: string): Promise<any> {
     if (!this.config.apiKey) {
-      throw new HttpException('SMS service not configured', HttpStatus.SERVICE_UNAVAILABLE);
+      throw new HttpException(
+        'SMS service not configured',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
     }
 
     try {
       const formattedNumber = this.formatPhoneNumber(to);
-      
-      const response = await this.httpClient.post<ArkeselSmsResponse>('/sms/send', {
-        sender: sender || this.config.senderId,
-        message: message,
-        recipients: [formattedNumber],
-      });
+
+      const response = await this.httpClient.post<ArkeselSmsResponse>(
+        '/sms/send',
+        {
+          sender: sender || this.config.senderId,
+          message: message,
+          recipients: [formattedNumber],
+        },
+      );
 
       if (
         response.data.code === '1000' ||
@@ -63,7 +71,10 @@ export class ArkeselService {
       ) {
         // If response.data.data is an array, get the first id
         let messageId = 'N/A';
-        if (Array.isArray(response.data.data) && response.data.data.length > 0) {
+        if (
+          Array.isArray(response.data.data) &&
+          response.data.data.length > 0
+        ) {
           messageId = response.data.data[0].id;
         } else if (response.data.data?.id) {
           messageId = response.data.data.id;
@@ -97,17 +108,21 @@ export class ArkeselService {
    * @param message - SMS message content (same for all)
    * @param sender - Optional custom sender ID
    */
-  async sendBulkSms(recipients: string[], message: string, sender?: string): Promise<any[]> {
+  async sendBulkSms(
+    recipients: string[],
+    message: string,
+    sender?: string,
+  ): Promise<any[]> {
     const results = [];
-    
+
     for (const recipient of recipients) {
       try {
         const result = await this.sendSms(recipient, message, sender);
         results.push({ recipient, ...result });
       } catch (error) {
-        results.push({ 
-          recipient, 
-          success: false, 
+        results.push({
+          recipient,
+          success: false,
           error: error.message,
           provider: 'arkesel',
         });
@@ -127,15 +142,15 @@ export class ArkeselService {
     sender?: string,
   ): Promise<any[]> {
     const results = [];
-    
+
     for (const msg of messages) {
       try {
         const result = await this.sendSms(msg.number, msg.message, sender);
         results.push(result);
       } catch (error) {
-        results.push({ 
+        results.push({
           recipient: msg.number,
-          success: false, 
+          success: false,
           error: error.message,
           provider: 'arkesel',
         });
@@ -151,7 +166,7 @@ export class ArkeselService {
   async checkBalance(): Promise<{ balance: number; currency: string }> {
     try {
       const response = await this.httpClient.get('/clients/balance-details');
-      
+
       return {
         balance: parseFloat(response.data.data?.balance || '0'),
         currency: 'GHS',
@@ -188,22 +203,22 @@ export class ArkeselService {
   private formatPhoneNumber(phoneNumber: string): string {
     // Remove all non-digit characters except +
     let cleaned = phoneNumber.replace(/[^\d+]/g, '');
-    
+
     // Remove leading + if present
     if (cleaned.startsWith('+')) {
       cleaned = cleaned.substring(1);
     }
-    
+
     // If starts with 0, replace with 233
     if (cleaned.startsWith('0')) {
       return '233' + cleaned.substring(1);
     }
-    
+
     // If doesn't start with 233, add it
     if (!cleaned.startsWith('233')) {
       return '233' + cleaned;
     }
-    
+
     return cleaned;
   }
 

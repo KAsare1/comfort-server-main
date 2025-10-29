@@ -1,4 +1,11 @@
-import { IsString, IsPhoneNumber, IsEmail, IsOptional, IsDateString, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsPhoneNumber,
+  IsEmail,
+  IsOptional,
+  IsDateString,
+  IsEnum,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { DriverStatus } from 'src/shared/enums';
 
@@ -52,7 +59,10 @@ export class CreateDriverDto {
 
   @ApiProperty({
     description: 'Driver documents as key-value pairs (document type: URL)',
-    example: { license: 'https://example.com/license.pdf', insurance: 'https://example.com/insurance.pdf' },
+    example: {
+      license: 'https://example.com/license.pdf',
+      insurance: 'https://example.com/insurance.pdf',
+    },
     required: false,
   })
   @IsOptional()

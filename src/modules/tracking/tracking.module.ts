@@ -6,10 +6,11 @@ import { TrackingGateway } from './tracking.gateway';
 import { BookingsModule } from '../bookings/bookings.module';
 import { DriversModule } from '../drivers/drivers.module';
 import { TrackingData } from 'src/database/entities/tracking.entity';
+import { DriverLocation } from 'src/database/entities/driver-location.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TrackingData]),
+    TypeOrmModule.forFeature([TrackingData, DriverLocation]),
     BookingsModule,
     DriversModule,
   ],

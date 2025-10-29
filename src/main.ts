@@ -6,7 +6,6 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 // import 'module-alias/register';
 
-
 // declare const module: any;
 
 async function bootstrap() {
@@ -31,25 +30,26 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-  
-    const config = new DocumentBuilder()
+
+  const config = new DocumentBuilder()
     .setTitle('Comfort Backend API')
     .setDescription('The Comfort Backend')
     .setVersion('1.0')
     .addTag('comfort')
     .build();
-    const documentFactory = () => SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('docs', app, documentFactory);
-
+  const documentFactory = () => SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('docs', app, documentFactory);
 
   // WebSocket adapter for real-time tracking
   app.useWebSocketAdapter(new IoAdapter(app));
 
   const port = configService.get('PORT', 3001);
   await app.listen(port);
-  
+
   console.log(`🚗 COMFORT Backend running on port ${port}`);
-  console.log(`📍 API available at: http://localhost:${port}/${configService.get('API_PREFIX', 'api/v1')}`);
+  console.log(
+    `📍 API available at: http://localhost:${port}/${configService.get('API_PREFIX', 'api/v1')}`,
+  );
 
   //   if (module.hot) {
   //   module.hot.accept();

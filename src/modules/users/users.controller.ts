@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Put,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserQueryDto } from './dto/user-query.dto';
@@ -23,7 +32,10 @@ export class UsersController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: Partial<CreateUserDto>) {
+  update(
+    @Param('id') id: string,
+    @Body() updateUserDto: Partial<CreateUserDto>,
+  ) {
     return this.usersService.update(id, updateUserDto);
   }
 

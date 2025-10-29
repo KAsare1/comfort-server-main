@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Put,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { BookingsService } from './booking.service';
 import { BookingStatus } from 'src/shared/enums';
@@ -62,10 +71,7 @@ export class BookingsController {
   }
 
   @Put(':id/assign')
-  assignDriver(
-    @Param('id') id: string,
-    @Body() body: { driverId: string },
-  ) {
+  assignDriver(@Param('id') id: string, @Body() body: { driverId: string }) {
     return this.bookingsService.assignDriver(id, body.driverId);
   }
 
@@ -76,7 +82,9 @@ export class BookingsController {
 
   // Extra endpoints from bookings.controller.extra.ts
   @Get('search')
-  findWithPagination(@Query() queryDto: import('./dto/booking-query.dto').BookingQueryDto) {
+  findWithPagination(
+    @Query() queryDto: import('./dto/booking-query.dto').BookingQueryDto,
+  ) {
     return this.bookingsService.findWithPagination(queryDto);
   }
 
@@ -94,7 +102,8 @@ export class BookingsController {
   @Put(':id/location')
   updateLocation(
     @Param('id') id: string,
-    @Body() locationData: {
+    @Body()
+    locationData: {
       pickupLocation?: string;
       pickupLatitude?: number;
       pickupLongitude?: number;

@@ -1,5 +1,13 @@
 // src/database/entities/payment.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Booking } from './booking.entity';
 import { PaymentMethod, PaymentStatus } from 'src/shared/enums';
 
@@ -8,7 +16,7 @@ export class Payment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @OneToOne(() => Booking, booking => booking.payment)
+  @OneToOne(() => Booking, (booking) => booking.payment)
   @JoinColumn({ name: 'booking_id' })
   booking: Booking;
 
@@ -18,19 +26,19 @@ export class Payment {
   @Column({ type: 'varchar', length: 100, unique: true })
   reference: string;
 
-  @Column({ 
-    type: 'enum', 
-    enum: PaymentMethod 
+  @Column({
+    type: 'enum',
+    enum: PaymentMethod,
   })
   method: PaymentMethod;
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   amount: number;
 
-  @Column({ 
-    type: 'enum', 
-    enum: PaymentStatus, 
-    default: PaymentStatus.PENDING 
+  @Column({
+    type: 'enum',
+    enum: PaymentStatus,
+    default: PaymentStatus.PENDING,
   })
   status: PaymentStatus;
 

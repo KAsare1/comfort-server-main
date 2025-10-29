@@ -10,7 +10,7 @@ import { Payment } from 'src/database/entities/payment.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Payment]),
-  forwardRef(() => BookingsModule),
+    forwardRef(() => BookingsModule),
   ],
   controllers: [PaymentsController],
   providers: [PaymentsService, PaystackService],

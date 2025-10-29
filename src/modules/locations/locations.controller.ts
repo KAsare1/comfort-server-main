@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Put,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { LocationsService } from './locations.service';
 import { CreateLocationDto } from './dto/create-location.dto';
 import { GeocodeDto } from './dto/geocode.dto';
@@ -23,10 +32,7 @@ export class LocationsController {
   }
 
   @Get('search')
-  searchLocations(
-    @Query('q') query: string,
-    @Query('limit') limit?: string,
-  ) {
+  searchLocations(@Query('q') query: string, @Query('limit') limit?: string) {
     const limitNum = limit ? parseInt(limit) : 10;
     return this.locationsService.searchLocations(query, limitNum);
   }
@@ -40,7 +46,7 @@ export class LocationsController {
     const latitude = parseFloat(lat);
     const longitude = parseFloat(lng);
     const radiusKm = radius ? parseFloat(radius) : 5;
-    
+
     return this.locationsService.findNearby(latitude, longitude, radiusKm);
   }
 
@@ -50,21 +56,21 @@ export class LocationsController {
   }
 
   @Get('geocode/reverse')
-  geocodeReverse(
-    @Query('lat') lat: string,
-    @Query('lng') lng: string,
-  ) {
+  geocodeReverse(@Query('lat') lat: string, @Query('lng') lng: string) {
     const latitude = parseFloat(lat);
     const longitude = parseFloat(lng);
     return this.locationsService.geocodeReverse(latitude, longitude);
   }
 
   @Post('route')
-  getRoute(@Body() routeData: {
-    start: [number, number];
-    end: [number, number];
-    profile?: string;
-  }) {
+  getRoute(
+    @Body()
+    routeData: {
+      start: [number, number];
+      end: [number, number];
+      profile?: string;
+    },
+  ) {
     return this.locationsService.getRoute(
       routeData.start,
       routeData.end,
@@ -73,11 +79,14 @@ export class LocationsController {
   }
 
   @Post('route/optimized')
-  getOptimizedRoute(@Body() routeData: {
-    start: [number, number];
-    waypoints: [number, number][];
-    end: [number, number];
-  }) {
+  getOptimizedRoute(
+    @Body()
+    routeData: {
+      start: [number, number];
+      waypoints: [number, number][];
+      end: [number, number];
+    },
+  ) {
     return this.locationsService.getOptimizedRoute(
       routeData.start,
       routeData.waypoints,
@@ -96,7 +105,10 @@ export class LocationsController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateLocationDto: Partial<CreateLocationDto>) {
+  update(
+    @Param('id') id: string,
+    @Body() updateLocationDto: Partial<CreateLocationDto>,
+  ) {
     return this.locationsService.updateLocation(id, updateLocationDto);
   }
 

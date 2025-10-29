@@ -10,7 +10,11 @@ export class SmsService {
     return this.arkeselService.sendSms(to, message, sender);
   }
 
-  async sendBulkSms(recipients: string[], message: string, sender?: string): Promise<any[]> {
+  async sendBulkSms(
+    recipients: string[],
+    message: string,
+    sender?: string,
+  ): Promise<any[]> {
     return this.arkeselService.sendBulkSms(recipients, message, sender);
   }
 
@@ -19,12 +23,30 @@ export class SmsService {
   }
 
   // Template methods - delegate to ArkeselService
-  getBookingConfirmationMessage(bookingRef: string, pickupTime: string, pickupLocation: string): string {
-    return this.arkeselService.getBookingConfirmationMessage(bookingRef, pickupTime, pickupLocation);
+  getBookingConfirmationMessage(
+    bookingRef: string,
+    pickupTime: string,
+    pickupLocation: string,
+  ): string {
+    return this.arkeselService.getBookingConfirmationMessage(
+      bookingRef,
+      pickupTime,
+      pickupLocation,
+    );
   }
 
-  getDriverAssignedMessage(bookingRef: string, driverName: string, vehiclePlate: string, eta: string): string {
-    return this.arkeselService.getDriverAssignedMessage(bookingRef, driverName, vehiclePlate, eta);
+  getDriverAssignedMessage(
+    bookingRef: string,
+    driverName: string,
+    vehiclePlate: string,
+    eta: string,
+  ): string {
+    return this.arkeselService.getDriverAssignedMessage(
+      bookingRef,
+      driverName,
+      vehiclePlate,
+      eta,
+    );
   }
 
   getDriverArrivedMessage(bookingRef: string, driverName: string): string {
@@ -35,8 +57,16 @@ export class SmsService {
     return this.arkeselService.getTripCompletedMessage(bookingRef, amount);
   }
 
-  getPaymentConfirmationMessage(bookingRef: string, amount: number, paymentMethod: string): string {
-    return this.arkeselService.getPaymentConfirmationMessage(bookingRef, amount, paymentMethod);
+  getPaymentConfirmationMessage(
+    bookingRef: string,
+    amount: number,
+    paymentMethod: string,
+  ): string {
+    return this.arkeselService.getPaymentConfirmationMessage(
+      bookingRef,
+      amount,
+      paymentMethod,
+    );
   }
 }
 

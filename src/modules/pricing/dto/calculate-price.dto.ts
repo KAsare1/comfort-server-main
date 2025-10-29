@@ -8,7 +8,15 @@ export class CalculatePriceDto {
   @ApiProperty({
     description: 'The main pickup location',
     example: 'Sofoline',
-    enum: ['Sofoline', 'Kwadaso', 'Asuoyeboah', 'Tanoso', 'Abuakwa', 'Adum', 'Kejetia']
+    enum: [
+      'Sofoline',
+      'Kwadaso',
+      'Asuoyeboah',
+      'Tanoso',
+      'Abuakwa',
+      'Adum',
+      'Kejetia',
+    ],
   })
   @IsString()
   @IsNotEmpty()
@@ -17,7 +25,15 @@ export class CalculatePriceDto {
   @ApiProperty({
     description: 'The main dropoff location',
     example: 'Adum',
-    enum: ['Sofoline', 'Kwadaso', 'Asuoyeboah', 'Tanoso', 'Abuakwa', 'Adum', 'Kejetia']
+    enum: [
+      'Sofoline',
+      'Kwadaso',
+      'Asuoyeboah',
+      'Tanoso',
+      'Abuakwa',
+      'Adum',
+      'Kejetia',
+    ],
   })
   @IsString()
   @IsNotEmpty()

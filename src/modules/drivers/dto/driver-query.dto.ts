@@ -1,4 +1,11 @@
-import { IsOptional, IsEnum, IsString, IsNumber, Min, IsBoolean } from 'class-validator';
+import {
+  IsOptional,
+  IsEnum,
+  IsString,
+  IsNumber,
+  Min,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { DriverStatus } from 'src/shared/enums';

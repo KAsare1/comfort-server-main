@@ -39,18 +39,22 @@ export class EmailService {
     }
   }
 
-  async sendBulkEmail(recipients: string[], subject: string, html: string): Promise<any[]> {
+  async sendBulkEmail(
+    recipients: string[],
+    subject: string,
+    html: string,
+  ): Promise<any[]> {
     const results = [];
-    
+
     for (const recipient of recipients) {
       try {
         const result = await this.sendEmail(recipient, subject, html);
         results.push({ recipient, ...result });
       } catch (error) {
-        results.push({ 
-          recipient, 
-          success: false, 
-          error: error.message 
+        results.push({
+          recipient,
+          success: false,
+          error: error.message,
         });
       }
     }
@@ -59,7 +63,10 @@ export class EmailService {
   }
 
   // Email Templates
-  getBookingConfirmationEmail(customerName: string, bookingDetails: any): string {
+  getBookingConfirmationEmail(
+    customerName: string,
+    bookingDetails: any,
+  ): string {
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #2563eb;">Booking Confirmed!</h2>

@@ -1,5 +1,14 @@
 // src/database/entities/driver.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
 import { Vehicle } from './vehicle.entity';
 import { Booking } from './booking.entity';
 import { TrackingData } from './tracking.entity';
@@ -25,10 +34,10 @@ export class Driver {
   @Column({ type: 'date' })
   licenseExpiry: Date;
 
-  @Column({ 
-    type: 'enum', 
-    enum: DriverStatus, 
-    default: DriverStatus.OFFLINE 
+  @Column({
+    type: 'enum',
+    enum: DriverStatus,
+    default: DriverStatus.OFFLINE,
   })
   status: DriverStatus;
 
@@ -53,14 +62,14 @@ export class Driver {
   @Column({ type: 'jsonb', nullable: true })
   documents: Record<string, string>; // Store document URLs
 
-  @OneToOne(() => Vehicle, vehicle => vehicle.driver)
+  @OneToOne(() => Vehicle, (vehicle) => vehicle.driver)
   @JoinColumn()
   vehicle: Vehicle;
 
-  @OneToMany(() => Booking, booking => booking.driver)
+  @OneToMany(() => Booking, (booking) => booking.driver)
   bookings: Booking[];
 
-  @OneToMany(() => TrackingData, tracking => tracking.driver)
+  @OneToMany(() => TrackingData, (tracking) => tracking.driver)
   trackingData: TrackingData[];
 
   @CreateDateColumn()

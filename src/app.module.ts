@@ -33,7 +33,8 @@ import { AdminModule } from './modules/admin/admin.module';
     // Database
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => getDatabaseConfig(configService),
+      useFactory: (configService: ConfigService) =>
+        getDatabaseConfig(configService),
     }),
 
     // Redis Cache

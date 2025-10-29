@@ -4,7 +4,7 @@ import { ApiProperty } from '@nestjs/swagger';
 export class RouteDto {
   @ApiProperty({
     description: 'The starting coordinates [longitude, latitude]',
-    example: [-0.1870, 5.6037],
+    example: [-0.187, 5.6037],
     type: [Number],
   })
   @IsArray()
@@ -12,7 +12,7 @@ export class RouteDto {
 
   @ApiProperty({
     description: 'The ending coordinates [longitude, latitude]',
-    example: [-0.1969, 5.5560],
+    example: [-0.1969, 5.556],
     type: [Number],
   })
   @IsArray()

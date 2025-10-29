@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, Put, Delete, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Put,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { VehiclesService } from './vehicle.service';
 import { VehicleStatus } from 'src/shared/enums';
@@ -65,7 +74,10 @@ export class VehiclesController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateVehicleDto: Partial<CreateVehicleDto>) {
+  update(
+    @Param('id') id: string,
+    @Body() updateVehicleDto: Partial<CreateVehicleDto>,
+  ) {
     return this.vehiclesService.update(id, updateVehicleDto);
   }
 
@@ -78,10 +90,7 @@ export class VehiclesController {
   }
 
   @Put(':id/assign')
-  assignToDriver(
-    @Param('id') id: string,
-    @Body() body: { driverId: string },
-  ) {
+  assignToDriver(@Param('id') id: string, @Body() body: { driverId: string }) {
     return this.vehiclesService.assignToDriver(id, body.driverId);
   }
 

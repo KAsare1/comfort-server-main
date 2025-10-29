@@ -7,7 +7,9 @@ export interface ArkeselConfig {
   baseUrl: string;
 }
 
-export const getArkeselConfig = (configService: ConfigService): ArkeselConfig => {
+export const getArkeselConfig = (
+  configService: ConfigService,
+): ArkeselConfig => {
   const apiKey = configService.get<string>('ARKESEL_API_KEY');
   if (!apiKey) {
     throw new Error('Missing required environment variable: ARKESEL_API_KEY');

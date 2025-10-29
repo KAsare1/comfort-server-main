@@ -12,15 +12,16 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USERNAME || 'comfort_user',
   password: process.env.DB_PASSWORD || 'comfort_password',
   database: process.env.DB_DATABASE || 'comfort_db',
-  
+
   // Entity paths
   entities: ['src/**/*.entity.ts'],
-  
+
   // Migration paths
   migrations: ['src/database/migrations/*.ts'],
-  
+
   // SSL config
-  ssl: process.env.NODE_ENV === 'production' || process.env.DB_SSL === 'true'
-    ? { rejectUnauthorized: false }
-    : false,
+  ssl:
+    process.env.NODE_ENV === 'production' || process.env.DB_SSL === 'true'
+      ? { rejectUnauthorized: false }
+      : false,
 });

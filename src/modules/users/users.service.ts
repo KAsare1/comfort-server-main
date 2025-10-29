@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -29,15 +33,19 @@ export class UsersService {
     });
   }
 
-  async findWithPagination(queryDto: import('./dto/user-query.dto').UserQueryDto) {
+  async findWithPagination(
+    queryDto: import('./dto/user-query.dto').UserQueryDto,
+  ) {
     const { page = 1, limit = 10, role, search } = queryDto;
-    const query = this.usersRepository.createQueryBuilder('user')
+    const query = this.usersRepository
+      .createQueryBuilder('user')
       .where('user.isActive = :isActive', { isActive: true });
     if (role) query.andWhere('user.role = :role', { role });
-    if (search) query.andWhere(
-      '(user.name ILIKE :search OR user.phone ILIKE :search OR user.email ILIKE :search)',
-      { search: `%${search}%` }
-    );
+    if (search)
+      query.andWhere(
+        '(user.name ILIKE :search OR user.phone ILIKE :search OR user.email ILIKE :search)',
+        { search: `%${search}%` },
+      );
     const total = await query.getCount();
     const users = await query
       .orderBy('user.createdAt', 'DESC')
@@ -59,7 +67,9 @@ export class UsersService {
   }
 
   async getUserStats() {
-    const totalUsers = await this.usersRepository.count({ where: { isActive: true } });
+    const totalUsers = await this.usersRepository.count({
+      where: { isActive: true },
+    });
     const roleCounts = await this.usersRepository
       .createQueryBuilder('user')
       .select('user.role, COUNT(user.id) as count')
@@ -90,7 +100,7 @@ export class UsersService {
       .where('user.isActive = :isActive', { isActive: true })
       .andWhere(
         '(user.name ILIKE :query OR user.phone ILIKE :query OR user.email ILIKE :query)',
-        { query: `%${query}%` }
+        { query: `%${query}%` },
       )
       .orderBy('user.name', 'ASC')
       .take(limit)
@@ -102,11 +112,11 @@ export class UsersService {
       where: { id, isActive: true },
       relations: ['bookings'],
     });
-    
+
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    
+
     return user;
   }
 

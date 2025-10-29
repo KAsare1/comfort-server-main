@@ -1,4 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { UsersService } from '../users/users.service';
@@ -15,10 +21,17 @@ import { DriversService } from '../drivers/drivers.service';
 export class BookingsService {
   // Pricing matrix matching frontend
   private readonly pricingMatrix: Record<string, Record<string, number>> = {
-    'Abuakwa': { 'Adum': 10, 'Kejetia': 9, 'Sofoline': 7, 'Kwadaso': 7, 'Asuoyeboah': 6, 'Tanoso': 6 },
-    'Tanoso': { 'Adum': 8, 'Kejetia': 7, 'Sofoline': 6, 'Kwadaso': 5, 'Asuoyeboah': 5 },
-    'Asuoyeboah': { 'Adum': 6, 'Kejetia': 5, 'Kwadaso': 5, 'Sofoline': 5 },
-    'Kwadaso': { 'Adum': 6, 'Kejetia': 5, 'Sofoline': 5 }
+    Abuakwa: {
+      Adum: 10,
+      Kejetia: 9,
+      Sofoline: 7,
+      Kwadaso: 7,
+      Asuoyeboah: 6,
+      Tanoso: 6,
+    },
+    Tanoso: { Adum: 8, Kejetia: 7, Sofoline: 6, Kwadaso: 5, Asuoyeboah: 5 },
+    Asuoyeboah: { Adum: 6, Kejetia: 5, Kwadaso: 5, Sofoline: 5 },
+    Kwadaso: { Adum: 6, Kejetia: 5, Sofoline: 5 },
   };
 
   constructor(
@@ -28,15 +41,23 @@ export class BookingsService {
     @Inject(forwardRef(() => PaymentsService))
     private paymentsService: PaymentsService,
     private smsService: SmsService,
-  private vehiclesService: VehiclesService,
-  private driversService: DriversService,
+    private vehiclesService: VehiclesService,
+    private driversService: DriversService,
   ) {}
 
   /**
    * Calculate fare based on pickup and dropoff locations
    */
-  private calculateFare(pickupLocation: string, dropoffLocation: string, tripType: TripType): number {
-    if (!pickupLocation || !dropoffLocation || pickupLocation === dropoffLocation) {
+  private calculateFare(
+    pickupLocation: string,
+    dropoffLocation: string,
+    tripType: TripType,
+  ): number {
+    if (
+      !pickupLocation ||
+      !dropoffLocation ||
+      pickupLocation === dropoffLocation
+    ) {
       return 0;
     }
 
@@ -49,14 +70,18 @@ export class BookingsService {
     }
 
     if (!fare) {
-      throw new BadRequestException('Route not available between selected locations');
+      throw new BadRequestException(
+        'Route not available between selected locations',
+      );
     }
 
     // Double fare for round trips
     return tripType === TripType.ROUND_TRIP ? fare * 2 : fare;
   }
 
-  async create(createBookingDto: CreateBookingDto): Promise<{ booking: Booking; paymentInitResponse?: any }> {
+  async create(
+    createBookingDto: CreateBookingDto,
+  ): Promise<{ booking: Booking; paymentInitResponse?: any }> {
     // Find or create user
     const user = await this.usersService.findOrCreate({
       name: createBookingDto.name,
@@ -67,7 +92,7 @@ export class BookingsService {
     const totalAmount = this.calculateFare(
       createBookingDto.pickupLocation,
       createBookingDto.dropoffLocation,
-      createBookingDto.tripType
+      createBookingDto.tripType,
     );
 
     // Create booking
@@ -90,7 +115,11 @@ export class BookingsService {
 
     let paymentInitResponse: any = undefined;
     // Initialize payment if paymentMethod is provided
-    if (createBookingDto.paymentMethod === PaymentMethod.MOMO || createBookingDto.paymentMethod === PaymentMethod.VISA || createBookingDto.paymentMethod === PaymentMethod.MASTERCARD) {
+    if (
+      createBookingDto.paymentMethod === PaymentMethod.MOMO ||
+      createBookingDto.paymentMethod === PaymentMethod.VISA ||
+      createBookingDto.paymentMethod === PaymentMethod.MASTERCARD
+    ) {
       paymentInitResponse = await this.paymentsService.initializePayment({
         bookingId: savedBooking.id,
         amount: totalAmount,
@@ -98,30 +127,9 @@ export class BookingsService {
         customerEmail: user.email || `${user.phone}@comfort.com`,
         callbackUrl: '', // Set callback URL as needed
       });
-
-      // Send SMS after payment initialization
-      const smsMessage = this.smsService.getBookingConfirmationMessage(
-        savedBooking.reference,
-        savedBooking.departureTime,
-        savedBooking.pickupLocation
-      );
-      await this.smsService.sendSms(
-        user.phone,
-        smsMessage
-      );
-    } else {
-      // Send SMS for bookings without payment (e.g., pay later)
-      const smsMessage = this.smsService.getBookingConfirmationMessage(
-        savedBooking.reference,
-        savedBooking.departureTime,
-        savedBooking.pickupLocation
-      );
-      await this.smsService.sendSms(
-        user.phone,
-        smsMessage
-      );
     }
 
+    // SMS confirmation will be sent after driver assignment
     return { booking: savedBooking, paymentInitResponse };
   }
 
@@ -135,7 +143,13 @@ export class BookingsService {
   async findById(id: string): Promise<Booking> {
     const booking = await this.bookingsRepository.findOne({
       where: { id },
-      relations: ['customer', 'driver', 'driver.vehicle', 'payment', 'trackingData'],
+      relations: [
+        'customer',
+        'driver',
+        'driver.vehicle',
+        'payment',
+        'trackingData',
+      ],
     });
 
     if (!booking) {
@@ -174,11 +188,15 @@ export class BookingsService {
     });
   }
 
-  async updateStatus(id: string, status: BookingStatus, metadata?: Record<string, any>): Promise<Booking> {
+  async updateStatus(
+    id: string,
+    status: BookingStatus,
+    metadata?: Record<string, any>,
+  ): Promise<Booking> {
     const booking = await this.findById(id);
-    
+
     const updateData: Partial<Booking> = { status };
-    
+
     // Update timestamps based on status
     switch (status) {
       case BookingStatus.ASSIGNED:
@@ -207,27 +225,47 @@ export class BookingsService {
 
     // Find driver's vehicle
 
-  const driver = await this.driversService.findById(driverId);
-  if (!driver || !driver.vehicle) throw new BadRequestException('Driver or vehicle not found');
-  const vehicle = await this.vehiclesService.findById(driver.vehicle.id);
-  if (!vehicle) throw new BadRequestException('Vehicle not found');
+    const driver = await this.driversService.findById(driverId);
+    if (!driver || !driver.vehicle)
+      throw new BadRequestException('Driver or vehicle not found');
+    const vehicle = await this.vehiclesService.findById(driver.vehicle.id);
+    if (!vehicle) throw new BadRequestException('Vehicle not found');
 
     // Check seat availability
     if (vehicle.seatsAvailable < booking.seatsBooked) {
-      throw new BadRequestException('Not enough seats available in the vehicle');
+      throw new BadRequestException(
+        'Not enough seats available in the vehicle',
+      );
     }
 
     // Decrement seatsAvailable
-    await this.vehiclesService.update(vehicle.id, { seatsAvailable: vehicle.seatsAvailable - booking.seatsBooked });
+    await this.vehiclesService.update(vehicle.id, {
+      seatsAvailable: vehicle.seatsAvailable - booking.seatsBooked,
+    });
 
     // Assign driver and update booking status
-    return this.updateStatus(bookingId, BookingStatus.ASSIGNED, { driverId });
+    const updatedBooking = await this.updateStatus(bookingId, BookingStatus.ASSIGNED, { driverId });
+
+    // Send SMS confirmation after driver assignment
+    if (updatedBooking && updatedBooking.customer && updatedBooking.customer.phone) {
+      const smsMessage = this.smsService.getBookingConfirmationMessage(
+        updatedBooking.reference,
+        updatedBooking.departureTime,
+        updatedBooking.pickupLocation,
+      );
+      await this.smsService.sendSms(updatedBooking.customer.phone, smsMessage);
+    }
+    return updatedBooking;
   }
 
   async cancel(id: string, reason?: string): Promise<Booking> {
     const booking = await this.findById(id);
-    
-    if ([BookingStatus.COMPLETED, BookingStatus.CANCELLED].includes(booking.status)) {
+
+    if (
+      [BookingStatus.COMPLETED, BookingStatus.CANCELLED].includes(
+        booking.status,
+      )
+    ) {
       throw new BadRequestException('Cannot cancel this booking');
     }
 
@@ -250,7 +288,7 @@ export class BookingsService {
 
   async getBookingStats(startDate?: Date, endDate?: Date) {
     const query = this.bookingsRepository.createQueryBuilder('booking');
-    
+
     if (startDate) {
       query.andWhere('booking.createdAt >= :startDate', { startDate });
     }
@@ -259,12 +297,12 @@ export class BookingsService {
     }
 
     const totalBookings = await query.getCount();
-    
+
     const statusCounts = await query
       .select('booking.status, COUNT(booking.id) as count')
       .groupBy('booking.status')
       .getRawMany();
-    
+
     const totalRevenue = await query
       .select('SUM(booking.totalAmount)', 'total')
       .where('booking.status = :status', { status: BookingStatus.COMPLETED })
@@ -277,10 +315,23 @@ export class BookingsService {
     };
   }
 
-  async findWithPagination(queryDto: import('./dto/booking-query.dto').BookingQueryDto) {
-    const { page = 1, limit = 10, status, tripType, customerId, driverId, startDate, endDate, search } = queryDto;
-    
-    const query = this.bookingsRepository.createQueryBuilder('booking')
+  async findWithPagination(
+    queryDto: import('./dto/booking-query.dto').BookingQueryDto,
+  ) {
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      tripType,
+      customerId,
+      driverId,
+      startDate,
+      endDate,
+      search,
+    } = queryDto;
+
+    const query = this.bookingsRepository
+      .createQueryBuilder('booking')
       .leftJoinAndSelect('booking.customer', 'customer')
       .leftJoinAndSelect('booking.driver', 'driver')
       .leftJoinAndSelect('driver.vehicle', 'vehicle')
@@ -288,15 +339,22 @@ export class BookingsService {
 
     if (status) query.andWhere('booking.status = :status', { status });
     if (tripType) query.andWhere('booking.tripType = :tripType', { tripType });
-    if (customerId) query.andWhere('booking.customerId = :customerId', { customerId });
+    if (customerId)
+      query.andWhere('booking.customerId = :customerId', { customerId });
     if (driverId) query.andWhere('booking.driverId = :driverId', { driverId });
-    if (startDate) query.andWhere('booking.createdAt >= :startDate', { startDate: new Date(startDate) });
-    if (endDate) query.andWhere('booking.createdAt <= :endDate', { endDate: new Date(endDate) });
-    
+    if (startDate)
+      query.andWhere('booking.createdAt >= :startDate', {
+        startDate: new Date(startDate),
+      });
+    if (endDate)
+      query.andWhere('booking.createdAt <= :endDate', {
+        endDate: new Date(endDate),
+      });
+
     if (search) {
       query.andWhere(
         '(booking.reference ILIKE :search OR booking.pickupLocation ILIKE :search OR booking.pickupStop ILIKE :search OR booking.dropoffLocation ILIKE :search OR booking.dropoffStop ILIKE :search OR customer.name ILIKE :search)',
-        { search: `%${search}%` }
+        { search: `%${search}%` },
       );
     }
 
@@ -322,7 +380,10 @@ export class BookingsService {
     };
   }
 
-  async getBookingsByDateRange(startDate: Date, endDate: Date): Promise<Booking[]> {
+  async getBookingsByDateRange(
+    startDate: Date,
+    endDate: Date,
+  ): Promise<Booking[]> {
     return this.bookingsRepository.find({
       where: { createdAt: Between(startDate, endDate) },
       relations: ['customer', 'driver', 'driver.vehicle', 'payment'],
@@ -332,12 +393,16 @@ export class BookingsService {
 
   async getUpcomingBookings(): Promise<Booking[]> {
     const today = new Date().toISOString().split('T')[0];
-    
+
     return this.bookingsRepository
       .createQueryBuilder('booking')
       .where('booking.departureDate >= :today', { today })
-      .andWhere('booking.status IN (:...statuses)', { 
-        statuses: [BookingStatus.CONFIRMED, BookingStatus.ASSIGNED, BookingStatus.PENDING] 
+      .andWhere('booking.status IN (:...statuses)', {
+        statuses: [
+          BookingStatus.CONFIRMED,
+          BookingStatus.ASSIGNED,
+          BookingStatus.PENDING,
+        ],
       })
       .leftJoinAndSelect('booking.customer', 'customer')
       .leftJoinAndSelect('booking.driver', 'driver')
@@ -355,25 +420,38 @@ export class BookingsService {
     });
   }
 
-  async updateBookingLocation(id: string, locationData: {
-    pickupLocation?: string;
-    pickupStop?: string;
-    dropoffLocation?: string;
-    dropoffStop?: string;
-  }): Promise<Booking> {
+  async updateBookingLocation(
+    id: string,
+    locationData: {
+      pickupLocation?: string;
+      pickupStop?: string;
+      dropoffLocation?: string;
+      dropoffStop?: string;
+    },
+  ): Promise<Booking> {
     const booking = await this.findById(id);
-    
+
     if (booking.status !== BookingStatus.PENDING) {
-      throw new BadRequestException('Can only update location for pending bookings');
+      throw new BadRequestException(
+        'Can only update location for pending bookings',
+      );
     }
 
     // Recalculate fare if locations changed
     if (locationData.pickupLocation || locationData.dropoffLocation) {
       const newPickup = locationData.pickupLocation || booking.pickupLocation;
-      const newDropoff = locationData.dropoffLocation || booking.dropoffLocation;
-      
-      const totalAmount = this.calculateFare(newPickup, newDropoff, booking.tripType);
-      await this.bookingsRepository.update(id, { ...locationData, totalAmount });
+      const newDropoff =
+        locationData.dropoffLocation || booking.dropoffLocation;
+
+      const totalAmount = this.calculateFare(
+        newPickup,
+        newDropoff,
+        booking.tripType,
+      );
+      await this.bookingsRepository.update(id, {
+        ...locationData,
+        totalAmount,
+      });
     } else {
       await this.bookingsRepository.update(id, locationData);
     }

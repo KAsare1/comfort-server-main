@@ -2,12 +2,6 @@ import { IsString, IsNumber, IsOptional, Min, Max } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateLocationDto {
-  @ApiProperty({
-    description: 'The ID of the booking',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  @IsString()
-  bookingId: string;
 
   @ApiProperty({
     description: 'The ID of the driver',
@@ -29,7 +23,7 @@ export class UpdateLocationDto {
 
   @ApiProperty({
     description: 'The longitude coordinate',
-    example: -0.1870,
+    example: -0.187,
     minimum: -180,
     maximum: 180,
   })

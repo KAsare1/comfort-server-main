@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -22,7 +27,7 @@ export class LocationsService {
     private configService: ConfigService,
   ) {
     this.mapboxConfig = getMapboxConfig(this.configService);
-    
+
     this.mapboxClient = axios.create({
       baseURL: this.mapboxConfig.baseUrl,
       params: {
@@ -87,7 +92,10 @@ export class LocationsService {
    * @param limit - Max results
    * @returns Array of matching Location entities
    */
-  async searchLocations(query: string, limit: number = 10): Promise<Location[]> {
+  async searchLocations(
+    query: string,
+    limit: number = 10,
+  ): Promise<Location[]> {
     return this.locationsRepository.find({
       where: [
         { name: Like(`%${query}%`), isActive: true },
@@ -116,7 +124,7 @@ export class LocationsService {
     });
 
     return locations
-      .map(location => ({
+      .map((location) => ({
         ...location,
         distance: DistanceCalculator.haversineDistance(
           latitude,
@@ -125,7 +133,7 @@ export class LocationsService {
           location.longitude,
         ),
       }))
-      .filter(location => location.distance <= radiusKm)
+      .filter((location) => location.distance <= radiusKm)
       .sort((a, b) => a.distance - b.distance);
   }
 
@@ -137,7 +145,7 @@ export class LocationsService {
   async geocodeForward(geocodeDto: GeocodeDto): Promise<any[]> {
     try {
       const { query, proximity_lat, proximity_lng, limit = 5 } = geocodeDto;
-      
+
       const params: any = {
         access_token: this.mapboxConfig.accessToken,
         limit,
@@ -151,18 +159,28 @@ export class LocationsService {
 
       const response = await this.mapboxClient.get(
         `/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
-        { params }
+        { params },
       );
 
-      return response.data.features.map((feature: { id: any; text: any; place_name: any; center: any; bbox: any; properties: any; context: any; }) => ({
-        id: feature.id,
-        name: feature.text,
-        placeName: feature.place_name,
-        coordinates: feature.center, // [longitude, latitude]
-        bbox: feature.bbox,
-        properties: feature.properties,
-        context: feature.context,
-      }));
+      return response.data.features.map(
+        (feature: {
+          id: any;
+          text: any;
+          place_name: any;
+          center: any;
+          bbox: any;
+          properties: any;
+          context: any;
+        }) => ({
+          id: feature.id,
+          name: feature.text,
+          placeName: feature.place_name,
+          coordinates: feature.center, // [longitude, latitude]
+          bbox: feature.bbox,
+          properties: feature.properties,
+          context: feature.context,
+        }),
+      );
     } catch (error) {
       throw new HttpException(
         `Geocoding failed: ${error.response?.data?.message || error.message}`,
@@ -186,7 +204,7 @@ export class LocationsService {
             access_token: this.mapboxConfig.accessToken,
             types: 'place,locality,neighborhood,address,poi',
           },
-        }
+        },
       );
 
       const feature = response.data.features[0];
@@ -216,10 +234,14 @@ export class LocationsService {
    * @param profile - Travel mode (default: driving)
    * @returns RouteInfo object
    */
-  async getRoute(start: [number, number], end: [number, number], profile: string = 'driving'): Promise<RouteInfo> {
+  async getRoute(
+    start: [number, number],
+    end: [number, number],
+    profile: string = 'driving',
+  ): Promise<RouteInfo> {
     try {
       const coordinates = `${start[0]},${start[1]};${end[0]},${end[1]}`;
-      
+
       const response = await this.mapboxClient.get(
         `/directions/v5/mapbox/${profile}/${coordinates}`,
         {
@@ -229,7 +251,7 @@ export class LocationsService {
             steps: true,
             overview: 'full',
           },
-        }
+        },
       );
 
       const route = response.data.routes[0];
@@ -265,7 +287,7 @@ export class LocationsService {
   ): Promise<any> {
     try {
       const coordinates = [start, ...waypoints, end]
-        .map(coord => `${coord[0]},${coord[1]}`)
+        .map((coord) => `${coord[0]},${coord[1]}`)
         .join(';');
 
       const response = await this.mapboxClient.get(
@@ -279,7 +301,7 @@ export class LocationsService {
             source: 'first',
             destination: 'last',
           },
-        }
+        },
       );
 
       const trip = response.data.trips[0];
@@ -308,7 +330,11 @@ export class LocationsService {
    * @param coordinates - [lng, lat]
    * @returns The created Location entity
    */
-  async addPopularLocation(name: string, address: string, coordinates: [number, number]): Promise<Location> {
+  async addPopularLocation(
+    name: string,
+    address: string,
+    coordinates: [number, number],
+  ): Promise<Location> {
     const location = await this.create({
       name,
       address,
@@ -328,7 +354,10 @@ export class LocationsService {
    * @param updateData - Partial update DTO
    * @returns The updated Location entity
    */
-  async updateLocation(id: string, updateData: Partial<CreateLocationDto>): Promise<Location> {
+  async updateLocation(
+    id: string,
+    updateData: Partial<CreateLocationDto>,
+  ): Promise<Location> {
     await this.locationsRepository.update(id, updateData);
     return this.findById(id);
   }
@@ -345,10 +374,16 @@ export class LocationsService {
    * Gets statistics about locations.
    * @returns Object with total, popular, and city breakdown
    */
-  async getLocationStats(): Promise<{ totalLocations: number; popularLocations: number; locationsByCity: any[] }> {
-    const totalLocations = await this.locationsRepository.count({ where: { isActive: true } });
-    const popularLocations = await this.locationsRepository.count({ 
-      where: { isActive: true, isPopular: true } 
+  async getLocationStats(): Promise<{
+    totalLocations: number;
+    popularLocations: number;
+    locationsByCity: any[];
+  }> {
+    const totalLocations = await this.locationsRepository.count({
+      where: { isActive: true },
+    });
+    const popularLocations = await this.locationsRepository.count({
+      where: { isActive: true, isPopular: true },
     });
 
     const locationsByCity = await this.locationsRepository

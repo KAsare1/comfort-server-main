@@ -11,12 +11,13 @@ export class PricingController {
   constructor(private readonly pricingService: PricingService) {}
 
   @Post('calculate')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Calculate fare for a route',
-    description: 'Calculate the total fare based on pickup location, dropoff location, and trip type'
+    description:
+      'Calculate the total fare based on pickup location, dropoff location, and trip type',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Fare calculated successfully',
     schema: {
       example: {
@@ -27,12 +28,15 @@ export class PricingController {
         breakdown: {
           oneWayFare: 5,
           roundTripMultiplier: 2,
-          totalFare: 10
-        }
-      }
-    }
+          totalFare: 10,
+        },
+      },
+    },
   })
-  @ApiResponse({ status: 400, description: 'Invalid input or route not available' })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid input or route not available',
+  })
   calculateFare(@Body() calculateFareDto: CalculatePriceDto) {
     return this.pricingService.getFareEstimate(
       calculateFareDto.pickupLocation,
@@ -42,12 +46,19 @@ export class PricingController {
   }
 
   @Get('estimate')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get fare estimate using query parameters',
-    description: 'Alternative endpoint to calculate fare using URL query parameters instead of POST body'
+    description:
+      'Alternative endpoint to calculate fare using URL query parameters instead of POST body',
   })
-  @ApiResponse({ status: 200, description: 'Fare estimate retrieved successfully' })
-  @ApiResponse({ status: 400, description: 'Invalid parameters or route not available' })
+  @ApiResponse({
+    status: 200,
+    description: 'Fare estimate retrieved successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid parameters or route not available',
+  })
   getEstimate(
     @Query('pickupLocation') pickupLocation: string,
     @Query('dropoffLocation') dropoffLocation: string,
@@ -61,18 +72,27 @@ export class PricingController {
   }
 
   @Get('locations')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get all available locations',
-    description: 'Returns a list of all locations where bus service is available'
+    description:
+      'Returns a list of all locations where bus service is available',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'List of available locations',
     schema: {
       example: {
-        locations: ['Sofoline', 'Kwadaso', 'Asuoyeboah', 'Tanoso', 'Abuakwa', 'Adum', 'Kejetia']
-      }
-    }
+        locations: [
+          'Sofoline',
+          'Kwadaso',
+          'Asuoyeboah',
+          'Tanoso',
+          'Abuakwa',
+          'Adum',
+          'Kejetia',
+        ],
+      },
+    },
   })
   getLocations() {
     return {
@@ -81,22 +101,22 @@ export class PricingController {
   }
 
   @Get('routes')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get all available routes and their prices',
-    description: 'Returns all available routes with their one-way fare prices'
+    description: 'Returns all available routes with their one-way fare prices',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'List of all routes',
     schema: {
       example: {
         routes: [
           { from: 'Abuakwa', to: 'Adum', fare: 10 },
           { from: 'Abuakwa', to: 'Kejetia', fare: 9 },
-          { from: 'Tanoso', to: 'Adum', fare: 8 }
-        ]
-      }
-    }
+          { from: 'Tanoso', to: 'Adum', fare: 8 },
+        ],
+      },
+    },
   })
   getAllRoutes() {
     return {
@@ -105,42 +125,52 @@ export class PricingController {
   }
 
   @Get('matrix')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get the full pricing matrix',
-    description: 'Returns the complete pricing matrix and list of locations (admin use)'
+    description:
+      'Returns the complete pricing matrix and list of locations (admin use)',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Full pricing matrix',
     schema: {
       example: {
         matrix: {
-          'Abuakwa': { 'Adum': 10, 'Kejetia': 9 },
-          'Tanoso': { 'Adum': 8, 'Kejetia': 7 }
+          Abuakwa: { Adum: 10, Kejetia: 9 },
+          Tanoso: { Adum: 8, Kejetia: 7 },
         },
-        locations: ['Sofoline', 'Kwadaso', 'Asuoyeboah', 'Tanoso', 'Abuakwa', 'Adum', 'Kejetia']
-      }
-    }
+        locations: [
+          'Sofoline',
+          'Kwadaso',
+          'Asuoyeboah',
+          'Tanoso',
+          'Abuakwa',
+          'Adum',
+          'Kejetia',
+        ],
+      },
+    },
   })
   getPricingMatrix() {
     return this.pricingService.getPricingMatrix();
   }
 
   @Get('check-route')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Check if a route is available',
-    description: 'Verify if a route exists between two locations without calculating the fare'
+    description:
+      'Verify if a route exists between two locations without calculating the fare',
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Route availability status',
     schema: {
       example: {
         available: true,
         pickupLocation: 'Sofoline',
-        dropoffLocation: 'Adum'
-      }
-    }
+        dropoffLocation: 'Adum',
+      },
+    },
   })
   checkRoute(
     @Query('pickupLocation') pickupLocation: string,

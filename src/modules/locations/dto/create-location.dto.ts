@@ -1,4 +1,11 @@
-import { IsString, IsNumber, IsOptional, IsBoolean, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsBoolean,
+  Min,
+  Max,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateLocationDto {
@@ -31,7 +38,7 @@ export class CreateLocationDto {
 
   @ApiProperty({
     description: 'The longitude coordinate',
-    example: -0.1670,
+    example: -0.167,
     minimum: -180,
     maximum: 180,
   })

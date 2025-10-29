@@ -1,4 +1,11 @@
-import { IsOptional, IsEnum, IsDateString, IsString, IsNumber, Min } from 'class-validator';
+import {
+  IsOptional,
+  IsEnum,
+  IsDateString,
+  IsString,
+  IsNumber,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { BookingStatus, TripType } from 'src/shared/enums';

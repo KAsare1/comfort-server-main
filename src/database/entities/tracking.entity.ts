@@ -1,5 +1,12 @@
 // src/database/entities/tracking.entity.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Booking } from './booking.entity';
 import { Driver } from './driver.entity';
 
@@ -8,14 +15,14 @@ export class TrackingData {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Booking, booking => booking.trackingData)
+  @ManyToOne(() => Booking, (booking) => booking.trackingData)
   @JoinColumn({ name: 'booking_id' })
   booking: Booking;
 
   @Column({ name: 'booking_id' })
   bookingId: string;
 
-  @ManyToOne(() => Driver, driver => driver.trackingData)
+  @ManyToOne(() => Driver, (driver) => driver.trackingData)
   @JoinColumn({ name: 'driver_id' })
   driver: Driver;
 

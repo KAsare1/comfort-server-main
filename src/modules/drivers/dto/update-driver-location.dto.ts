@@ -1,7 +1,16 @@
-import { IsNumber, IsOptional, Min, Max } from 'class-validator';
+import { IsNumber, IsOptional, Min, Max, IsString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class UpdateDriverLocationDto {
+
+  @ApiProperty({
+    description: 'The ID of the driver',
+    example: '123e4567-e89b-12d3-a456-426614174001',
+  })
+  @IsString()
+  driverId: string;
+
+
   @ApiProperty({
     description: 'The latitude coordinate of the driver',
     example: 5.6037,
@@ -15,7 +24,7 @@ export class UpdateDriverLocationDto {
 
   @ApiProperty({
     description: 'The longitude coordinate of the driver',
-    example: -0.1870,
+    example: -0.187,
     minimum: -180,
     maximum: 180,
   })

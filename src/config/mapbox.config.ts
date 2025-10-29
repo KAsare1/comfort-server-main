@@ -28,7 +28,9 @@ export interface MapboxConfig {
 export const getMapboxConfig = (configService: ConfigService): MapboxConfig => {
   const accessToken = configService.get<string>('MAPBOX_ACCESS_TOKEN');
   if (!accessToken) {
-    throw new Error('Missing required environment variable: MAPBOX_ACCESS_TOKEN');
+    throw new Error(
+      'Missing required environment variable: MAPBOX_ACCESS_TOKEN',
+    );
   }
   return {
     accessToken,

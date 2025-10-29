@@ -24,7 +24,7 @@ export class GeocodeDto {
 
   @ApiProperty({
     description: 'Proximity bias longitude for search results',
-    example: -0.1870,
+    example: -0.187,
     minimum: -180,
     maximum: 180,
     required: false,

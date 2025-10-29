@@ -6,43 +6,43 @@ import { TripType } from 'src/shared/enums';
 export class PricingService {
   // Pricing matrix matching frontend - Single source of truth
   private readonly pricingMatrix: Record<string, Record<string, number>> = {
-    'Abuakwa': { 
-      'Adum': 10, 
-      'Kejetia': 9, 
-      'Sofoline': 7, 
-      'Kwadaso': 7, 
-      'Asuoyeboah': 6, 
-      'Tanoso': 6 
+    Abuakwa: {
+      Adum: 10,
+      Kejetia: 9,
+      Sofoline: 7,
+      Kwadaso: 7,
+      Asuoyeboah: 6,
+      Tanoso: 6,
     },
-    'Tanoso': { 
-      'Adum': 8, 
-      'Kejetia': 7, 
-      'Sofoline': 6, 
-      'Kwadaso': 5, 
-      'Asuoyeboah': 5 
+    Tanoso: {
+      Adum: 8,
+      Kejetia: 7,
+      Sofoline: 6,
+      Kwadaso: 5,
+      Asuoyeboah: 5,
     },
-    'Asuoyeboah': { 
-      'Adum': 6, 
-      'Kejetia': 5, 
-      'Kwadaso': 5, 
-      'Sofoline': 5 
+    Asuoyeboah: {
+      Adum: 6,
+      Kejetia: 5,
+      Kwadaso: 5,
+      Sofoline: 5,
     },
-    'Kwadaso': { 
-      'Adum': 6, 
-      'Kejetia': 5, 
-      'Sofoline': 5 
-    }
+    Kwadaso: {
+      Adum: 6,
+      Kejetia: 5,
+      Sofoline: 5,
+    },
   };
 
   // All available locations
   private readonly locations = [
-    'Sofoline', 
-    'Kwadaso', 
-    'Asuoyeboah', 
-    'Tanoso', 
-    'Abuakwa', 
-    'Adum', 
-    'Kejetia'
+    'Sofoline',
+    'Kwadaso',
+    'Asuoyeboah',
+    'Tanoso',
+    'Abuakwa',
+    'Adum',
+    'Kejetia',
   ];
 
   /**
@@ -50,11 +50,15 @@ export class PricingService {
    */
   getBaseFare(pickupLocation: string, dropoffLocation: string): number {
     if (!pickupLocation || !dropoffLocation) {
-      throw new BadRequestException('Pickup and dropoff locations are required');
+      throw new BadRequestException(
+        'Pickup and dropoff locations are required',
+      );
     }
 
     if (pickupLocation === dropoffLocation) {
-      throw new BadRequestException('Pickup and dropoff locations cannot be the same');
+      throw new BadRequestException(
+        'Pickup and dropoff locations cannot be the same',
+      );
     }
 
     // Check direct route
@@ -67,7 +71,7 @@ export class PricingService {
 
     if (!fare) {
       throw new BadRequestException(
-        `Route not available between ${pickupLocation} and ${dropoffLocation}`
+        `Route not available between ${pickupLocation} and ${dropoffLocation}`,
       );
     }
 
@@ -80,7 +84,7 @@ export class PricingService {
   calculateFare(
     pickupLocation: string,
     dropoffLocation: string,
-    tripType: TripType
+    tripType: TripType,
   ): number {
     const baseFare = this.getBaseFare(pickupLocation, dropoffLocation);
     const multiplier = tripType === TripType.ROUND_TRIP ? 2 : 1;
@@ -93,7 +97,7 @@ export class PricingService {
   getFareEstimate(
     pickupLocation: string,
     dropoffLocation: string,
-    tripType: TripType
+    tripType: TripType,
   ) {
     const baseFare = this.getBaseFare(pickupLocation, dropoffLocation);
     const multiplier = tripType === TripType.ROUND_TRIP ? 2 : 1;
@@ -108,7 +112,7 @@ export class PricingService {
         oneWayFare: baseFare,
         roundTripMultiplier: tripType === TripType.ROUND_TRIP ? 2 : 1,
         totalFare,
-      }
+      },
     };
   }
 
@@ -143,10 +147,10 @@ export class PricingService {
    */
   isRouteAvailable(pickupLocation: string, dropoffLocation: string): boolean {
     if (pickupLocation === dropoffLocation) return false;
-    
+
     const hasDirect = !!this.pricingMatrix[pickupLocation]?.[dropoffLocation];
     const hasReverse = !!this.pricingMatrix[dropoffLocation]?.[pickupLocation];
-    
+
     return hasDirect || hasReverse;
   }
 
