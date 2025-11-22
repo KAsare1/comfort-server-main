@@ -214,16 +214,18 @@ export class BookingsService {
   }
 
   async findByReference(reference: string): Promise<Booking> {
-    const booking = await this.bookingsRepository.findOne({
-      where: { reference },
-      relations: ['customer', 'driver', 'driver.vehicle', 'payment'],
-    });
+      const booking = await this.bookingsRepository.findOne({
+        where: { reference },
+        relations: ['customer', 'driver', 'driver.vehicle', 'payment'],
+      });
 
-    if (!booking) {
-      throw new NotFoundException('Booking not found');
-    }
-
-    return booking;
+      if (!booking) {
+        throw new NotFoundException('Booking not found');
+      }
+      if (booking.driverId && (!booking.driver || !booking.driver.vehicle)) {
+        throw new BadRequestException('Assigned driver does not have a vehicle');
+      }
+      return booking;
   }
 
   async findByCustomer(customerId: string): Promise<Booking[]> {
@@ -298,48 +300,48 @@ export class BookingsService {
 
   async assignDriver(bookingId: string, driverId: string): Promise<Booking> {
     // Find booking and driver
-    const booking = await this.findById(bookingId);
-    if (!booking) throw new NotFoundException('Booking not found');
-    if (!booking.seatsBooked) booking.seatsBooked = 1;
+      const booking = await this.findById(bookingId);
+      if (!booking) throw new NotFoundException('Booking not found');
+      if (!booking.seatsBooked) booking.seatsBooked = 1;
 
-    // Find driver's vehicle
-    const driver = await this.driversService.findById(driverId);
-    if (!driver || !driver.vehicle)
-      throw new BadRequestException('Driver or vehicle not found');
-    const vehicle = await this.vehiclesService.findById(driver.vehicle.id);
-    if (!vehicle) throw new BadRequestException('Vehicle not found');
+      // Find driver's vehicle
+      const driver = await this.driversService.findById(driverId);
+      if (!driver) throw new BadRequestException('Driver not found');
+      if (!driver.vehicle) throw new BadRequestException('Assigned driver does not have a vehicle');
+      const vehicle = await this.vehiclesService.findById(driver.vehicle.id);
+      if (!vehicle) throw new BadRequestException('Vehicle not found');
 
-    // Check seat availability
-    if (vehicle.seatsAvailable < booking.seatsBooked) {
-      throw new BadRequestException(
-        'Not enough seats available in the vehicle',
-      );
-    }
+      // Check seat availability
+      if (vehicle.seatsAvailable < booking.seatsBooked) {
+        throw new BadRequestException(
+          'Not enough seats available in the vehicle',
+        );
+      }
 
-    // Decrement seatsAvailable
-    const newSeatsAvailable = vehicle.seatsAvailable - booking.seatsBooked;
-    await this.vehiclesService.update(vehicle.id, {
-      seatsAvailable: newSeatsAvailable,
-    });
+      // Decrement seatsAvailable
+      const newSeatsAvailable = vehicle.seatsAvailable - booking.seatsBooked;
+      await this.vehiclesService.update(vehicle.id, {
+        seatsAvailable: newSeatsAvailable,
+      });
 
-    // If vehicle is now full, set driver status to BUSY
-    if (newSeatsAvailable === 0) {
-      await this.driversService.updateStatus(driverId, DriverStatus.BUSY);
-    }
+      // If vehicle is now full, set driver status to BUSY
+      if (newSeatsAvailable === 0) {
+        await this.driversService.updateStatus(driverId, DriverStatus.BUSY);
+      }
 
-    // Assign driver and update booking status
-    const updatedBooking = await this.updateStatus(bookingId, BookingStatus.ASSIGNED, { driverId });
+      // Assign driver and update booking status
+      const updatedBooking = await this.updateStatus(bookingId, BookingStatus.ASSIGNED, { driverId });
 
-    // Send SMS confirmation after driver assignment
-    if (updatedBooking && updatedBooking.customer && updatedBooking.customer.phone) {
-      const smsMessage = this.smsService.getBookingConfirmationMessage(
-        updatedBooking.reference,
-        updatedBooking.departureTime,
-        updatedBooking.pickupLocation,
-      );
-      await this.smsService.sendSms(updatedBooking.customer.phone, smsMessage);
-    }
-    return updatedBooking;
+      // Send SMS confirmation after driver assignment
+      if (updatedBooking && updatedBooking.customer && updatedBooking.customer.phone) {
+        const smsMessage = this.smsService.getBookingConfirmationMessage(
+          updatedBooking.reference,
+          updatedBooking.departureTime,
+          updatedBooking.pickupLocation,
+        );
+        await this.smsService.sendSms(updatedBooking.customer.phone, smsMessage);
+      }
+      return updatedBooking;
   }
 
   async cancel(id: string, reason?: string): Promise<Booking> {

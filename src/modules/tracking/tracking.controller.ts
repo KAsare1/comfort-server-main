@@ -11,13 +11,114 @@ import {
 import { TrackingService } from './tracking.service';
 import { TrackingGateway } from './tracking.gateway';
 import { UpdateDriverLocationDto } from '../drivers/dto/update-driver-location.dto';
+import { BookingsService } from '../bookings/booking.service';
 
 @Controller('tracking')
 export class TrackingController {
   constructor(
     private readonly trackingService: TrackingService,
     private readonly trackingGateway: TrackingGateway,
+    private readonly bookingsService: BookingsService,
   ) {}
+  /**
+   * Get booking's driver current location
+   * GET /tracking/booking/:reference/location
+   */
+  @Get('booking/:reference/location')
+  async getBookingDriverLocation(@Param('reference') reference: string) {
+    try {
+      const booking = await this.bookingsService.findByReference(reference);
+      if (!booking.driverId) {
+        throw new HttpException('No driver assigned to this booking', HttpStatus.NOT_FOUND);
+      }
+      return await this.getDriverLocation(booking.driverId);
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message || 'Failed to get booking driver location',
+        },
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get booking's driver location history
+   * GET /tracking/booking/:reference/history?startDate=xxx&endDate=xxx
+   */
+  @Get('booking/:reference/history')
+  async getBookingDriverHistory(
+    @Param('reference') reference: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    try {
+      const booking = await this.bookingsService.findByReference(reference);
+      if (!booking.driverId) {
+        throw new HttpException('No driver assigned to this booking', HttpStatus.NOT_FOUND);
+      }
+      return await this.getDriverHistory(booking.driverId, startDate, endDate);
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message || 'Failed to get booking driver history',
+        },
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get booking's driver trip summary
+   * GET /tracking/booking/:reference/summary?startDate=xxx&endDate=xxx
+   */
+  @Get('booking/:reference/summary')
+  async getBookingDriverSummary(
+    @Param('reference') reference: string,
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+  ) {
+    try {
+      const booking = await this.bookingsService.findByReference(reference);
+      if (!booking.driverId) {
+        throw new HttpException('No driver assigned to this booking', HttpStatus.NOT_FOUND);
+      }
+      return await this.getDriverSummary(booking.driverId, startDate, endDate);
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message || 'Failed to get booking driver summary',
+        },
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  /**
+   * Get booking's driver status
+   * GET /tracking/booking/:reference/status
+   */
+  @Get('booking/:reference/status')
+  async getBookingDriverStatus(@Param('reference') reference: string) {
+    try {
+      const booking = await this.bookingsService.findByReference(reference);
+      if (!booking.driverId) {
+        throw new HttpException('No driver assigned to this booking', HttpStatus.NOT_FOUND);
+      }
+      return await this.getDriverStatus(booking.driverId);
+    } catch (error) {
+      throw new HttpException(
+        {
+          success: false,
+          message: error.message || 'Failed to get booking driver status',
+        },
+        error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 
   /**
    * Driver sends location update
