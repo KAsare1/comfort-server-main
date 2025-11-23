@@ -79,8 +79,11 @@ export class VehiclesService {
   async assignToDriver(vehicleId: string, driverId: string): Promise<Vehicle> {
     const vehicle = await this.findById(vehicleId);
 
-    if (vehicle.driver) {
-      throw new ConflictException('Vehicle is already assigned to a driver');
+    // Optionally log previous driver for audit
+    const previousDriverId = vehicle.driver ? vehicle.driver.id : null;
+    if (previousDriverId && previousDriverId !== driverId) {
+      // You can add logging here if needed
+      // e.g., console.log(`Vehicle ${vehicleId} reassigned from driver ${previousDriverId} to ${driverId}`);
     }
 
     await this.vehiclesRepository
