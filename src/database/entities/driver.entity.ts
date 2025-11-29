@@ -1,4 +1,4 @@
-// src/database/entities/driver.entity.ts
+// Updated Driver entity with password field
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -13,6 +13,7 @@ import { Vehicle } from './vehicle.entity';
 import { Booking } from './booking.entity';
 import { TrackingData } from './tracking.entity';
 import { DriverStatus } from 'src/shared/enums';
+import { Exclude } from 'class-transformer';
 
 @Entity('drivers')
 export class Driver {
@@ -27,6 +28,10 @@ export class Driver {
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   email: string;
+
+  @Column({ type: 'varchar', length: 255, default: "asare"})
+  @Exclude() 
+  password: string;
 
   @Column({ type: 'varchar', length: 50 })
   licenseNumber: string;

@@ -1,15 +1,18 @@
-
-// ...existing code...
+// Add these authentication methods to your existing DriversService
 import {
   Injectable,
   NotFoundException,
   ConflictException,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
 import { CreateDriverDto } from './dto/create-driver.dto';
 import { UpdateDriverLocationDto } from './dto/update-driver-location.dto';
+import { DriverLoginDto } from './dto/driver-login.dto';
 import { Driver } from 'src/database/entities/driver.entity';
 import { DriverStatus } from 'src/shared/enums';
 import { DistanceCalculator } from 'src/common/utils/distance.calculator';
@@ -20,9 +23,131 @@ export class DriversService {
   constructor(
     @InjectRepository(Driver)
     private driversRepository: Repository<Driver>,
+    private jwtService: JwtService,
   ) {}
 
-  async create(createDriverDto: CreateDriverDto): Promise<Driver> {
+  // ==================== NEW AUTH METHODS ====================
+
+  /**
+   * Login driver and return JWT token
+   */
+  async login(loginDto: DriverLoginDto): Promise<{ driver: Partial<Driver>; accessToken: string }> {
+    const driver = await this.driversRepository.findOne({
+      where: { phone: loginDto.phone, isActive: true },
+      relations: ['vehicle'],
+    });
+
+    if (!driver) {
+      throw new UnauthorizedException('Invalid phone number or password');
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(loginDto.password, driver.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid phone number or password');
+    }
+
+    // Generate JWT token
+    const accessToken = this.generateToken(driver);
+
+    // Remove password from response
+    const { password, ...driverWithoutPassword } = driver;
+
+    return {
+      driver: driverWithoutPassword,
+      accessToken,
+    };
+  }
+
+  /**
+   * Generate JWT token for driver
+   */
+  private generateToken(driver: Driver): string {
+    const payload = {
+      sub: driver.id,
+      phone: driver.phone,
+      name: driver.name,
+      role: 'driver',
+    };
+
+    return this.jwtService.sign(payload);
+  }
+
+  /**
+   * Change driver password (can be used by driver or admin)
+   */
+  async changePassword(
+    driverId: string,
+    newPassword: string,
+  ): Promise<void> {
+    const driver = await this.driversRepository.findOne({
+      where: { id: driverId, isActive: true },
+    });
+
+    if (!driver) {
+      throw new NotFoundException('Driver not found');
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await this.driversRepository.update(driverId, { password: hashedPassword });
+  }
+
+  /**
+   * Update driver password (requires current password verification)
+   */
+  async updatePassword(
+    driverId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const driver = await this.driversRepository.findOne({
+      where: { id: driverId, isActive: true },
+    });
+
+    if (!driver) {
+      throw new NotFoundException('Driver not found');
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(currentPassword, driver.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await this.driversRepository.update(driverId, { password: hashedPassword });
+  }
+
+  /**
+   * Get driver profile by ID (without password)
+   */
+  async getProfile(driverId: string): Promise<Partial<Driver>> {
+    const driver = await this.findById(driverId);
+    const { password, ...driverWithoutPassword } = driver;
+    return driverWithoutPassword;
+  }
+
+  /**
+   * Generate a random password for new drivers
+   */
+  generateRandomPassword(length: number = 8): string {
+    const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+      password += charset.charAt(Math.floor(Math.random() * charset.length));
+    }
+    return password;
+  }
+
+  // ==================== UPDATED CREATE METHOD ====================
+
+  async create(createDriverDto: CreateDriverDto): Promise<{ driver: Partial<Driver>; password: string }> {
     // Check if driver already exists
     const existingDriver = await this.findByPhone(createDriverDto.phone);
     if (existingDriver) {
@@ -31,9 +156,31 @@ export class DriversService {
       );
     }
 
-    const driver = this.driversRepository.create(createDriverDto);
-    return this.driversRepository.save(driver);
+    // Generate random password
+    const plainPassword = this.generateRandomPassword();
+    
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(plainPassword, salt);
+
+    // Create driver with hashed password
+    const driver = this.driversRepository.create({
+      ...createDriverDto,
+      password: hashedPassword,
+    });
+
+    const savedDriver = await this.driversRepository.save(driver);
+
+    // Remove password from response
+    const { password, ...driverWithoutPassword } = savedDriver;
+
+    return {
+      driver: driverWithoutPassword,
+      password: plainPassword, // Return plain password so admin can share it with driver
+    };
   }
+
+  // ==================== EXISTING METHODS (UNCHANGED) ====================
 
   async findAll(): Promise<Driver[]> {
     return this.driversRepository.find({
@@ -98,7 +245,6 @@ export class DriversService {
       .map((result) => {
         const driver = driversWithLocation.find((d) => d.id === result.id);
         if (!driver) {
-          // This should not happen, but for type safety, throw if not found
           throw new NotFoundException(`Driver with id ${result.id} not found`);
         }
         return { ...driver, distance: result.distance };
@@ -134,14 +280,12 @@ export class DriversService {
       throw new BadRequestException('Driver is not available');
     }
 
-    // Do not update status here; status is managed by booking logic based on vehicle fullness
     return driver;
   }
 
   async completeTrip(driverId: string): Promise<Driver> {
     const driver = await this.findById(driverId);
 
-    // Update stats
     await this.driversRepository.update(driverId, {
       totalTrips: driver.totalTrips + 1,
       status: DriverStatus.AVAILABLE,
@@ -153,12 +297,11 @@ export class DriversService {
   async updateRating(driverId: string, newRating: number): Promise<Driver> {
     const driver = await this.findById(driverId);
 
-    // Simple average calculation (you might want to implement a more sophisticated system)
     const updatedRating =
       (driver.rating * driver.totalTrips + newRating) / (driver.totalTrips + 1);
 
     await this.driversRepository.update(driverId, {
-      rating: Math.round(updatedRating * 100) / 100, // Round to 2 decimal places
+      rating: Math.round(updatedRating * 100) / 100,
     });
 
     return this.findById(driverId);
@@ -167,7 +310,6 @@ export class DriversService {
   async getDriverStats(driverId: string) {
     const driver = await this.findById(driverId);
 
-    // Get booking statistics
     const bookingStats = await this.driversRepository
       .createQueryBuilder('driver')
       .leftJoin('driver.bookings', 'booking')
@@ -198,8 +340,7 @@ export class DriversService {
         totalEarnings: parseFloat(bookingStats.totalEarnings) || 0,
         completionRate:
           bookingStats.totalBookings > 0
-            ? (bookingStats.completedBookings / bookingStats.totalBookings) *
-              100
+            ? (bookingStats.completedBookings / bookingStats.totalBookings) * 100
             : 0,
       },
     };
@@ -301,7 +442,6 @@ export class DriversService {
     return this.driversRepository.find({
       where: {
         isActive: true,
-        // licenseExpiry: LessThanOrEqual(futureDate) // You'll need to import LessThanOrEqual from typeorm
       },
       relations: ['vehicle'],
       order: { licenseExpiry: 'ASC' },
@@ -323,13 +463,13 @@ export class DriversService {
     return this.findById(id);
   }
 
-    /**
-   * Deactivate all drivers (bulk delete)
-   */
   async deactivateAll(): Promise<void> {
-    await this.driversRepository.update({ isActive: true }, {
-      isActive: false,
-      status: DriverStatus.OFFLINE,
-    });
+    await this.driversRepository.update(
+      { isActive: true },
+      {
+        isActive: false,
+        status: DriverStatus.OFFLINE,
+      },
+    );
   }
 }
