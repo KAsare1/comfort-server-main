@@ -14,10 +14,10 @@ export class DriverLoginDto {
   @ApiProperty({
     description: 'Driver password',
     example: 'SecurePassword123',
-    minLength: 6,
+    minLength: 4,
   })
   @IsString()
   @IsNotEmpty()
-  @MinLength(6)
+  @MinLength(4)
   password: string;
 }
