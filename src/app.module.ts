@@ -16,6 +16,7 @@ import { PaymentsModule } from './modules/payments/payments.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { UsersModule } from './modules/users/users.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
+import { BatchModule } from './modules/batches/batch.module';
 import { VehiclesModule } from './modules/vehicle/vehicle.module';
 import { TrackingModule } from './modules/tracking/tracking.module';
 import { PricingModule } from './modules/pricing/pricing.module';
@@ -73,6 +74,7 @@ import { AdminModule } from './modules/admin/admin.module';
     // Feature Modules
     UsersModule,
     BookingsModule,
+    BatchModule,
     DriversModule,
     VehiclesModule,
     PaymentsModule,
@@ -84,3 +86,4 @@ import { AdminModule } from './modules/admin/admin.module';
   ],
 })
 export class AppModule {}
+

@@ -17,6 +17,7 @@ import { PaymentsService } from '../payments/payments.service';
 import { SmsService } from '../notifications/sms/sms.service';
 import { VehiclesService } from '../vehicle/vehicle.service';
 import { DriversService } from '../drivers/drivers.service';
+import { BatchService } from '../batches/batch.service';
 
 @Injectable()
 export class BookingsService {
@@ -97,6 +98,8 @@ export class BookingsService {
     private smsService: SmsService,
     private vehiclesService: VehiclesService,
     private driversService: DriversService,
+    @Inject(forwardRef(() => BatchService))
+    private batchService: BatchService,
   ) {}
 
   /**
@@ -260,37 +263,15 @@ export class BookingsService {
         if (metadata?.driverId) {
           updateData.driverId = metadata.driverId;
         }
+        if (metadata?.batchId) {
+          updateData.batchId = metadata.batchId;
+        }
         break;
       case BookingStatus.IN_PROGRESS:
         updateData.startedAt = new Date();
         break;
       case BookingStatus.COMPLETED:
         updateData.completedAt = new Date();
-        // After marking as completed, check if all bookings for the vehicle are completed
-        const completedBooking = await this.findById(id);
-        if (completedBooking && completedBooking.driver && completedBooking.driver.vehicle) {
-          const vehicleId = completedBooking.driver.vehicle.id;
-          const driverId = completedBooking.driver.id;
-          // Find all active (not completed/cancelled) bookings for this vehicle
-          const activeBookings = await this.bookingsRepository.count({
-            where: {
-              driverId,
-              status: Not(BookingStatus.COMPLETED),
-            },
-          });
-          const vehicle = await this.vehiclesService.findById(vehicleId);
-          if (vehicle) {
-            if (vehicle.seatsAvailable === 0 && activeBookings === 0) {
-              // Only reset seats and set driver available if vehicle was full and all bookings are now completed
-              await this.vehiclesService.update(vehicleId, { seatsAvailable: vehicle.totalSeats });
-              await this.driversService.updateStatus(driverId, DriverStatus.AVAILABLE);
-            } else if (vehicle.seatsAvailable > 0 && activeBookings === 0) {
-              // If seats are already available and all bookings are completed, just set driver to available
-              await this.driversService.updateStatus(driverId, DriverStatus.AVAILABLE);
-            }
-            // If there are still active bookings, do nothing
-          }
-        }
         break;
     }
 
@@ -300,48 +281,80 @@ export class BookingsService {
 
   async assignDriver(bookingId: string, driverId: string): Promise<Booking> {
     // Find booking and driver
-      const booking = await this.findById(bookingId);
-      if (!booking) throw new NotFoundException('Booking not found');
-      if (!booking.seatsBooked) booking.seatsBooked = 1;
+    const booking = await this.findById(bookingId);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (!booking.seatsBooked) booking.seatsBooked = 1;
 
-      // Find driver's vehicle
-      const driver = await this.driversService.findById(driverId);
-      if (!driver) throw new BadRequestException('Driver not found');
-      if (!driver.vehicle) throw new BadRequestException('Assigned driver does not have a vehicle');
-      const vehicle = await this.vehiclesService.findById(driver.vehicle.id);
-      if (!vehicle) throw new BadRequestException('Vehicle not found');
+    // Find driver's vehicle
+    const driver = await this.driversService.findById(driverId);
+    if (!driver) throw new BadRequestException('Driver not found');
+    if (!driver.vehicle) throw new BadRequestException('Assigned driver does not have a vehicle');
+    const vehicle = await this.vehiclesService.findById(driver.vehicle.id);
+    if (!vehicle) throw new BadRequestException('Vehicle not found');
 
-      // Check seat availability
-      if (vehicle.seatsAvailable < booking.seatsBooked) {
+    // Check if driver has an active batch
+    const canAccept = await this.batchService.canAcceptMoreBookings(driverId);
+
+    let batchId: string;
+
+    if (canAccept.canAccept && canAccept.currentBatch) {
+      // Driver has an active batch, check if dropoff matches
+      const currentBatch = canAccept.currentBatch;
+
+      if (currentBatch.dropoffLocation !== booking.dropoffLocation) {
         throw new BadRequestException(
-          'Not enough seats available in the vehicle',
+          `Cannot add booking to current batch. Current batch is going to ${currentBatch.dropoffLocation}, but this booking requires dropoff at ${booking.dropoffLocation}. Please complete current batch first.`,
         );
       }
 
-      // Decrement seatsAvailable
-      const newSeatsAvailable = vehicle.seatsAvailable - booking.seatsBooked;
-      await this.vehiclesService.update(vehicle.id, {
-        seatsAvailable: newSeatsAvailable,
-      });
-
-      // If vehicle is now full, set driver status to BUSY
-      if (newSeatsAvailable === 0) {
-        await this.driversService.updateStatus(driverId, DriverStatus.BUSY);
-      }
-
-      // Assign driver and update booking status
-      const updatedBooking = await this.updateStatus(bookingId, BookingStatus.ASSIGNED, { driverId });
-
-      // Send SMS confirmation after driver assignment
-      if (updatedBooking && updatedBooking.customer && updatedBooking.customer.phone) {
-        const smsMessage = this.smsService.getBookingConfirmationMessage(
-          updatedBooking.reference,
-          updatedBooking.departureTime,
-          updatedBooking.pickupLocation,
+      // Verify pickup location matches batch's current dropoff (for continuation)
+      if (currentBatch.dropoffLocation !== booking.pickupLocation) {
+        throw new BadRequestException(
+          `Booking pickup location (${booking.pickupLocation}) must match batch dropoff location (${currentBatch.dropoffLocation}) for continuation routes.`,
         );
-        await this.smsService.sendSms(updatedBooking.customer.phone, smsMessage);
       }
-      return updatedBooking;
+
+      // Add booking to existing batch
+      await this.batchService.addBookingToBatch(
+        currentBatch.id,
+        bookingId,
+        booking.seatsBooked,
+      );
+      batchId = currentBatch.id;
+    } else {
+      // Create new batch for this driver
+      const batch = await this.batchService.createBatch(
+        driverId,
+        vehicle.id,
+        booking.pickupLocation,
+        booking.pickupStop,
+        booking.dropoffLocation,
+        booking.dropoffStop,
+        booking.departureDate,
+        booking.departureTime,
+        booking.seatsBooked,
+        vehicle.totalSeats,
+      );
+      batchId = batch.id;
+    }
+
+    // Update booking status with batch info
+    const updatedBooking = await this.updateStatus(bookingId, BookingStatus.ASSIGNED, {
+      driverId,
+      batchId,
+    });
+
+    // Send SMS confirmation after driver assignment
+    if (updatedBooking && updatedBooking.customer && updatedBooking.customer.phone) {
+      const smsMessage = this.smsService.getBookingConfirmationMessage(
+        updatedBooking.reference,
+        updatedBooking.departureTime,
+        updatedBooking.pickupLocation,
+      );
+      await this.smsService.sendSms(updatedBooking.customer.phone, smsMessage);
+    }
+
+    return updatedBooking;
   }
 
   async cancel(id: string, reason?: string): Promise<Booking> {

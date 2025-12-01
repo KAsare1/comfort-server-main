@@ -11,6 +11,7 @@ import { forwardRef } from '@nestjs/common';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { VehiclesModule } from '../vehicle/vehicle.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { BatchModule } from '../batches/batch.module';
 
 @Module({
   imports: [
@@ -22,9 +23,11 @@ import { PaymentsModule } from '../payments/payments.module';
     VehiclesModule,
     DriversModule,
     forwardRef(() => PaymentsModule),
+    forwardRef(() => BatchModule),
   ],
   controllers: [BookingsController],
   providers: [BookingsService],
   exports: [BookingsService],
 })
 export class BookingsModule {}
+

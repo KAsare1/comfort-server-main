@@ -14,6 +14,7 @@ import { Payment } from './payment.entity';
 import { TrackingData } from './tracking.entity';
 import { User } from './user.entity';
 import { Driver } from './driver.entity';
+import { Batch } from './batch.entity';
 import { BookingStatus, TripType } from 'src/shared/enums';
 
 @Entity('bookings')
@@ -37,6 +38,16 @@ export class Booking {
 
   @Column({ name: 'driver_id', nullable: true })
   driverId: string;
+
+  @ManyToOne(() => Batch, (batch) => batch.bookings, { nullable: true })
+  @JoinColumn({ name: 'batch_id' })
+  batch: Batch;
+
+  @Column({ name: 'batch_id', nullable: true })
+  batchId: string;
+
+  @Column({ type: 'int', nullable: true })
+  batchNumber: number;
 
   // Pickup location fields
   @Column({ type: 'varchar', length: 100, nullable: true })

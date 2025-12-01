@@ -1,4 +1,3 @@
-// Updated Driver entity with password field
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -11,6 +10,7 @@ import {
 } from 'typeorm';
 import { Vehicle } from './vehicle.entity';
 import { Booking } from './booking.entity';
+import { Batch } from './batch.entity';
 import { TrackingData } from './tracking.entity';
 import { DriverStatus } from 'src/shared/enums';
 import { Exclude } from 'class-transformer';
@@ -64,6 +64,9 @@ export class Driver {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
+  @Column({ name: 'current_batch_id', nullable: true })
+  currentBatchId: string;
+
   @Column({ type: 'jsonb', nullable: true })
   documents: Record<string, string>; // Store document URLs
 
@@ -73,6 +76,9 @@ export class Driver {
 
   @OneToMany(() => Booking, (booking) => booking.driver)
   bookings: Booking[];
+
+  @OneToMany(() => Batch, (batch) => batch.driver)
+  batches: Batch[];
 
   @OneToMany(() => TrackingData, (tracking) => tracking.driver)
   trackingData: TrackingData[];

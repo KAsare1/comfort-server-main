@@ -28,7 +28,6 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class DriversController {
   constructor(private readonly driversService: DriversService) {}
 
-  // ==================== NEW AUTH ENDPOINTS ====================
   
   @Public()
   @Post('login')
