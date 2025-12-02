@@ -6,12 +6,9 @@ import {
   Param,
   Body,
   Query,
-  UseGuards,
-  BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBody } from '@nestjs/swagger';
 import { BatchService } from './batch.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { BatchStatus } from 'src/database/entities/batch.entity';
 
 @ApiTags('batches')
@@ -31,9 +28,7 @@ export class BatchController {
   /**
    * Get current active batch for a driver
    */
-  @UseGuards(JwtAuthGuard)
   @Get('driver/:driverId/current')
-  // @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current active batch for driver' })
   async getCurrentBatch(@Param('driverId') driverId: string) {
     const batch = await this.batchService.getCurrentBatchForDriver(driverId);
@@ -46,9 +41,7 @@ export class BatchController {
   /**
    * Get all active batches for a driver
    */
-  @UseGuards(JwtAuthGuard)
   @Get('driver/:driverId/active')
-  // @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all active batches for driver' })
   async getActiveBatches(@Param('driverId') driverId: string) {
     return this.batchService.getActiveBatchesForDriver(driverId);
@@ -57,9 +50,7 @@ export class BatchController {
   /**
    * Get all batches for a driver with pagination
    */
-  @UseGuards(JwtAuthGuard)
   @Get('driver/:driverId')
-  // @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all batches for driver with pagination' })
   async getBatchesForDriver(
     @Param('driverId') driverId: string,
@@ -80,9 +71,7 @@ export class BatchController {
   /**
    * Check if driver can accept more bookings
    */
-  @UseGuards(JwtAuthGuard)
   @Get('driver/:driverId/check-availability')
-  // @ApiBearerAuth()
   @ApiOperation({ summary: 'Check if driver can accept more bookings' })
   async checkAvailability(@Param('driverId') driverId: string) {
     return this.batchService.canAcceptMoreBookings(driverId);
@@ -91,9 +80,7 @@ export class BatchController {
   /**
    * Complete a batch (confirm all drop-offs)
    */
-  @UseGuards(JwtAuthGuard)
   @Put(':id/complete')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Complete batch (confirm all drop-offs)' })
   @ApiBody({
     schema: {
@@ -117,9 +104,7 @@ export class BatchController {
   /**
    * Cancel a batch
    */
-  @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  // @ApiBearerAuth()
   @ApiOperation({ summary: 'Cancel a batch' })
   @ApiBody({
     schema: {
