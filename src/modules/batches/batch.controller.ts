@@ -33,7 +33,7 @@ export class BatchController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('driver/:driverId/current')
-  @ApiBearerAuth()
+  // @ApiBearerAuth()
   @ApiOperation({ summary: 'Get current active batch for driver' })
   async getCurrentBatch(@Param('driverId') driverId: string) {
     const batch = await this.batchService.getCurrentBatchForDriver(driverId);
@@ -48,7 +48,7 @@ export class BatchController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('driver/:driverId/active')
-  @ApiBearerAuth()
+  // @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all active batches for driver' })
   async getActiveBatches(@Param('driverId') driverId: string) {
     return this.batchService.getActiveBatchesForDriver(driverId);
@@ -59,7 +59,7 @@ export class BatchController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('driver/:driverId')
-  @ApiBearerAuth()
+  // @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all batches for driver with pagination' })
   async getBatchesForDriver(
     @Param('driverId') driverId: string,
@@ -82,7 +82,7 @@ export class BatchController {
    */
   @UseGuards(JwtAuthGuard)
   @Get('driver/:driverId/check-availability')
-  @ApiBearerAuth()
+  // @ApiBearerAuth()
   @ApiOperation({ summary: 'Check if driver can accept more bookings' })
   async checkAvailability(@Param('driverId') driverId: string) {
     return this.batchService.canAcceptMoreBookings(driverId);
@@ -119,7 +119,7 @@ export class BatchController {
    */
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  @ApiBearerAuth()
+  // @ApiBearerAuth()
   @ApiOperation({ summary: 'Cancel a batch' })
   @ApiBody({
     schema: {
