@@ -307,13 +307,6 @@ export class BookingsService {
         );
       }
 
-      // Verify pickup location matches batch's current dropoff (for continuation)
-      if (currentBatch.dropoffLocation !== booking.pickupLocation) {
-        throw new BadRequestException(
-          `Booking pickup location (${booking.pickupLocation}) must match batch dropoff location (${currentBatch.dropoffLocation}) for continuation routes.`,
-        );
-      }
-
       // Add booking to existing batch
       await this.batchService.addBookingToBatch(
         currentBatch.id,
