@@ -276,7 +276,40 @@ export class BookingsService {
     }
 
     await this.bookingsRepository.update(id, updateData);
-    return this.findById(id);
+    const updatedBooking = await this.findById(id);
+
+    // Check if this is the last booking in a batch that needs to be completed
+    if (status === BookingStatus.COMPLETED && updatedBooking.batchId) {
+      await this.checkAndCompleteBatchIfAllBookingsCompleted(updatedBooking.batchId);
+    }
+
+    return updatedBooking;
+  }
+
+  /**
+   * Check if all bookings in a batch are completed.
+   * If so, automatically complete the batch (which sets driver to AVAILABLE).
+   */
+  private async checkAndCompleteBatchIfAllBookingsCompleted(batchId: string): Promise<void> {
+    try {
+      // Get all bookings in the batch
+      const batchBookings = await this.bookingsRepository.find({
+        where: { batchId },
+      });
+
+      // Check if all bookings are completed
+      const allCompleted = batchBookings.every(
+        (b) => b.status === BookingStatus.COMPLETED,
+      );
+
+      // If all bookings are completed, complete the batch
+      if (allCompleted && batchBookings.length > 0) {
+        await this.batchService.completeBatch(batchId);
+      }
+    } catch (error) {
+      // Log error but don't throw - this is a side effect operation
+      console.error(`Error auto-completing batch ${batchId}:`, error);
+    }
   }
 
   async assignDriver(bookingId: string, driverId: string): Promise<Booking> {
